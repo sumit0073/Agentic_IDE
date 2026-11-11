@@ -42,6 +42,7 @@
   --info-wash:#5a93d620;
   --font-ui:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --font-mono:'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --tok-fn:#c9a768;
   --shadow-pop:0 12px 32px -8px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.4);
   color-scheme:dark;
 }
@@ -71,6 +72,7 @@
     --danger-wash:#c0453b18;
     --info:#3f74b0;
     --info-wash:#3f74b018;
+    --tok-fn:#9a7524;
     --shadow-pop:0 12px 32px -8px rgba(20,20,30,.16),0 2px 8px -2px rgba(20,20,30,.08);
     color-scheme:light;
   }
@@ -81,7 +83,7 @@
   --text:#17171a; --text-2:#5c5c63; --text-3:#86868d; --text-disabled:#b7b7bc;
   --accent:#3760c9; --accent-strong:#2b4da3; --accent-wash:#3760c914; --on-accent:#f7f8fc;
   --success:#2f8a57; --success-wash:#2f8a5718; --warning:#a3701f; --warning-wash:#a3701f18;
-  --danger:#c0453b; --danger-wash:#c0453b18; --info:#3f74b0; --info-wash:#3f74b018;
+  --danger:#c0453b; --danger-wash:#c0453b18; --info:#3f74b0; --info-wash:#3f74b018; --tok-fn:#9a7524;
   --shadow-pop:0 12px 32px -8px rgba(20,20,30,.16),0 2px 8px -2px rgba(20,20,30,.08);
   color-scheme:light;
 }
@@ -220,8 +222,7 @@ button{ cursor:pointer; }
 .ln{ width:34px; flex:none; text-align:right; padding-right:16px; color:var(--text-disabled); font-family:var(--font-mono); font-size:12.5px; user-select:none; }
 .code{ font-family:var(--font-mono); font-size:12.5px; white-space:pre; color:var(--text); }
 .tok-kw{ color:var(--accent); } .tok-str{ color:var(--success); } .tok-com{ color:var(--text-3); font-style:italic; }
-.tok-fn{ color:#c9a768; } .tok-num{ color:#c98a2e; }
-:root[data-theme="light"] .tok-fn, @media (prefers-color-scheme:light){ .tok-fn{ color:#9a7524; } }
+.tok-fn{ color:var(--tok-fn); } .tok-num{ color:#c98a2e; }
 
 .panelbar{ display:flex; align-items:center; gap:18px; padding:7px 18px; background:var(--bg-surface); border-top:1px solid var(--border-subtle); flex:none; }
 .panelbar .seg{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.4px; color:var(--text-3); padding-bottom:6px; border-bottom:2px solid transparent; cursor:pointer; }
