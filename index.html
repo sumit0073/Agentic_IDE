@@ -1,0 +1,1908 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ledger — Desktop-First Agentic Coding IDE</title>
+<meta name="description" content="Ledger is a desktop-first agentic coding IDE where your code stays on your machine. Built on TypeScript, Electron, React, Monaco, xterm.js, Node API, PostgreSQL, Redis, Clerk, Stripe, and Model Gateway.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000;
+  --bg-elevated:#0a0a0b;
+  --bg-surface:#111113;
+  --bg-surface-2:#18181b;
+  --bg-inset:#050506;
+  --border:#1f1f23;
+  --border-strong:#2e2e34;
+  --text:#fafafa;
+  --text-2:#a1a1aa;
+  --text-3:#71717a;
+  --text-mute:#52525b;
+  --accent:#5b8def;
+  --accent-strong:#4576d9;
+  --accent-wash:rgba(91,141,239,.12);
+  --on-accent:#f8fafc;
+  --success:#3ecf8e;
+  --success-wash:rgba(62,207,142,.14);
+  --warning:#e0a03a;
+  --warning-wash:rgba(224,160,58,.14);
+  --danger:#f07167;
+  --danger-wash:rgba(240,113,103,.14);
+  --info:#6ba3e8;
+  --info-wash:rgba(107,163,232,.14);
+  --font:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --max:1160px;
+  --ease:cubic-bezier(.22,1,.36,1);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+::selection{background:var(--accent-wash);color:var(--text)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+
+.mono{font-family:var(--mono)}
+.lbl{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);
+}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
+.dot.blink{animation:blink 1.8s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.02em;
+  border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text-2);
+}
+.pill.live{color:var(--accent);border-color:rgba(91,141,239,.28);background:var(--accent-wash)}
+.pill.ok{color:var(--success);border-color:rgba(62,207,142,.28);background:var(--success-wash)}
+.pill.warn{color:var(--warning);border-color:rgba(224,160,58,.28);background:var(--warning-wash)}
+.kbd{
+  font-family:var(--mono);font-size:11px;color:var(--text-3);
+  border:1px solid var(--border);border-radius:6px;padding:3px 7px;background:var(--bg-inset);
+}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+  border:1px solid var(--border);background:rgba(255,255,255,.02);
+  font-family:var(--mono);font-size:11px;color:var(--text-2);
+}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 20px;border-radius:999px;font-size:14px;font-weight:600;
+  border:1px solid var(--border-strong);background:rgba(255,255,255,.04);color:var(--text);
+  transition:background .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease),box-shadow .2s var(--ease);
+}
+.btn:hover{background:rgba(255,255,255,.08);transform:translateY(-1px)}
+.btn.primary{
+  background:var(--text);border-color:var(--text);color:#000;
+}
+.btn.primary:hover{background:#e4e4e7;border-color:#e4e4e7;box-shadow:0 0 0 4px rgba(255,255,255,.06)}
+.btn.accent{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.btn.accent:hover{background:var(--accent-strong);border-color:var(--accent-strong);box-shadow:0 0 0 4px rgba(91,141,239,.18)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--text-2)}
+.btn.ghost:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.btn.sm{padding:6px 12px;font-size:12px;border-radius:8px}
+
+/* atmosphere */
+.page-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 480px at 50% -8%, rgba(91,141,239,.16), transparent 55%),
+    radial-gradient(700px 500px at 100% 40%, rgba(255,255,255,.03), transparent 50%),
+    #000;
+}
+.page-bg::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size:28px 28px;
+  mask-image:radial-gradient(ellipse 70% 50% at 50% 0%, #000 10%, transparent 70%);
+  opacity:.55;
+}
+
+.wrap{width:min(100% - 48px, var(--max));margin-inline:auto;position:relative;z-index:1}
+.section{padding:140px 0;position:relative;z-index:1}
+.section-head{max-width:760px;margin:0 auto 72px;text-align:center}
+.section-head .lbl{justify-content:center;margin-bottom:20px}
+.section-head h2{
+  font-size:clamp(2rem, 4.2vw, 3.15rem);
+  font-weight:600;letter-spacing:-.045em;line-height:1.08;text-wrap:balance;
+}
+.section-head p{
+  margin:20px auto 0;max-width:60ch;color:var(--text-2);
+  font-size:1.125rem;line-height:1.65;font-weight:400;
+}
+
+/* nav */
+.site-nav{
+  position:sticky;top:0;z-index:60;
+  backdrop-filter:saturate(140%) blur(16px);
+  background:rgba(0,0,0,.65);
+  border-bottom:1px solid transparent;
+  transition:border-color .25s ease, background .25s ease;
+}
+.site-nav.scrolled{border-bottom-color:var(--border)}
+.site-nav .inner{
+  display:flex;align-items:center;justify-content:space-between;
+  height:64px;width:min(100% - 48px, var(--max));margin-inline:auto;gap:20px;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.02em}
+.brand-mark{
+  width:24px;height:24px;border-radius:7px;border:1px solid var(--border-strong);
+  background:linear-gradient(160deg, #1a1a1e, #0a0a0c);
+  display:grid;place-items:center;
+}
+.brand-mark svg{width:12px;height:12px;color:var(--text)}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-links a{font-size:13.5px;color:var(--text-3);font-weight:500;transition:color .15s ease}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{display:flex;align-items:center;gap:8px}
+.nav-cta .btn{padding:8px 14px;font-size:13px}
+.btn-demo{
+  border-color:rgba(91,141,239,.35);background:var(--accent-wash);color:var(--text);
+}
+.btn-demo:hover{border-color:var(--accent);background:rgba(91,141,239,.2)}
+
+/* hero */
+.hero{
+  position:relative;z-index:1;
+  padding:88px 0 0;
+  display:flex;flex-direction:column;align-items:center;
+  min-height:min(100svh, 1040px);
+}
+.hero-copy{
+  width:min(100% - 48px, 880px);margin-inline:auto;text-align:center;
+  animation:rise .9s var(--ease) both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hero-copy .lbl{justify-content:center;margin-bottom:28px;color:var(--text-2)}
+.hero-brand{
+  font-size:clamp(4rem, 12vw, 7.5rem);font-weight:650;
+  letter-spacing:-.06em;line-height:.88;margin-bottom:28px;
+  background:linear-gradient(180deg, #fff 30%, #8b8b96 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero h1{
+  font-size:clamp(1.35rem, 2.8vw, 1.85rem);font-weight:500;
+  letter-spacing:-.025em;line-height:1.35;color:var(--text);
+  text-wrap:balance;max-width:26em;margin-inline:auto;
+}
+.hero-lead{
+  margin:22px auto 0;max-width:48em;color:var(--text-3);
+  font-size:1.05rem;line-height:1.7;
+}
+.hero-cta{
+  display:flex;flex-wrap:wrap;gap:12px;margin-top:36px;
+  justify-content:center;align-items:center;
+}
+.hero-meta{
+  display:flex;flex-wrap:wrap;gap:10px;margin-top:28px;justify-content:center;
+}
+
+/* product stage & interactive shell */
+.product-stage{
+  width:100%;margin-top:72px;position:relative;
+  animation:rise 1s .15s var(--ease) both;
+}
+.product-stage::before{
+  content:'';position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(90%, 940px);height:55%;
+  background:radial-gradient(ellipse at center, rgba(91,141,239,.22), transparent 70%);
+  filter:blur(40px);pointer-events:none;z-index:0;
+}
+.ide-shell{
+  position:relative;z-index:1;
+  width:min(100% - 32px, 1180px);margin:0 auto;
+  border:1px solid var(--border-strong);
+  border-bottom:none;border-radius:16px 16px 0 0;
+  background:var(--bg-elevated);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.03) inset,
+    0 -40px 100px -40px rgba(91,141,239,.25),
+    0 40px 120px -20px rgba(0,0,0,.8);
+  overflow:hidden;
+}
+.titlebar{
+  height:40px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);
+}
+.tb-left,.tb-right{display:flex;align-items:center;gap:12px;min-width:0}
+.tb-dots{display:flex;gap:6px}
+.tb-dots span{width:10px;height:10px;border-radius:50%;background:#2a2a2e;display:block}
+.tb-path{color:var(--text-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-path b{color:var(--text-2);font-weight:500}
+
+.ide-body{display:flex;min-height:420px;background:var(--bg)}
+.navrail{
+  width:58px;flex:none;background:var(--bg-elevated);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;
+}
+.navbtn{
+  width:42px;height:42px;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-mute);
+  transition:all .15s ease;
+}
+.navbtn:hover{color:var(--text-2);background:rgba(255,255,255,.04)}
+.navbtn.active{color:var(--accent);background:var(--accent-wash)}
+.navbtn svg{width:17px;height:17px}
+.navbtn span{font-size:8.5px;font-weight:500}
+
+/* hero views container */
+.hero-view-container{flex:1;min-width:0;display:flex}
+.hero-view{display:none;width:100%;height:100%}
+.hero-view.active{display:flex}
+
+/* view: code */
+.explorer{
+  width:200px;flex:none;background:var(--bg-elevated);border-right:1px solid var(--border);
+  padding:14px 0;display:none;
+}
+@media (min-width:860px){.explorer{display:block}}
+.explorer-head{padding:0 14px 10px}
+.frow{
+  display:flex;align-items:center;gap:6px;padding:5px 14px;color:var(--text-2);
+  border-left:2px solid transparent;font-size:12.5px;white-space:nowrap;cursor:pointer;
+}
+.frow:hover{background:rgba(255,255,255,.02)}
+.frow.active{background:rgba(255,255,255,.04);color:var(--text);border-left-color:var(--accent)}
+.editorcol{flex:1;min-width:0;display:flex;flex-direction:column}
+.tabs{display:flex;background:var(--bg-elevated);border-bottom:1px solid var(--border)}
+.tab{
+  display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:12.5px;color:var(--text-3);
+  border-right:1px solid var(--border);
+}
+.tab.active{background:var(--bg);color:var(--text);font-weight:500}
+.breadcrumb{padding:8px 18px;font-family:var(--mono);font-size:11px;color:var(--text-3);border-bottom:1px solid var(--border)}
+.breadcrumb b{color:var(--text-2);font-weight:500}
+.codearea{flex:1;padding:16px 0;overflow:hidden}
+.codeline{display:flex;padding:1px 18px}
+.ln{width:34px;flex:none;text-align:right;padding-right:16px;color:var(--text-mute);font-family:var(--mono);font-size:12.5px}
+.code{font-family:var(--mono);font-size:12.5px;white-space:pre;color:var(--text)}
+.tok-kw{color:var(--accent)}.tok-str{color:var(--success)}.tok-com{color:var(--text-3);font-style:italic}
+.tok-fn{color:#d4b06a}.tok-num{color:var(--warning)}
+.panelbar{display:flex;gap:20px;padding:8px 18px;background:var(--bg-elevated);border-top:1px solid var(--border)}
+.panelbar .seg{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--text-3);padding-bottom:6px;border-bottom:2px solid transparent}
+.panelbar .seg.active{color:var(--text);border-color:var(--accent)}
+.terminal{height:100px;background:var(--bg-elevated);padding:12px 18px;overflow:hidden}
+.termline{font-family:var(--mono);font-size:11.5px;color:var(--text-2);padding:2px 0}
+.termline.cmd{color:var(--text)}.termline.cmd::before{content:'$ ';color:var(--text-3)}
+.termline.ok{color:var(--success)}
+.statusbar{
+  height:26px;background:#1a4fbf;display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;font-family:var(--mono);font-size:10.5px;color:#e8eefc;font-weight:500;
+}
+.statusbar .grp{display:flex;gap:16px}
+.agentteaser{
+  width:260px;flex:none;background:var(--bg-elevated);border-left:1px solid var(--border);
+  padding:16px;display:none;flex-direction:column;
+}
+@media (min-width:980px){.agentteaser{display:flex}}
+.teaser-ask textarea{
+  resize:none;background:var(--bg-inset);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--text);height:68px;font-size:12.5px;width:100%;margin-top:12px;
+  font-family:inherit;line-height:1.45;
+}
+.btn-ask-hero{
+  justify-content:center;margin-top:10px;width:100%;border-radius:10px;font-size:12px;padding:9px;
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.btn-ask-hero:hover{background:var(--accent-strong)}
+
+/* view: agent hero */
+.hero-agent-view{display:flex;width:100%}
+.hero-agent-left{
+  width:260px;flex:none;border-right:1px solid var(--border);padding:18px;background:var(--bg-elevated);
+  display:none;flex-direction:column;gap:14px;
+}
+@media (min-width:860px){.hero-agent-left{display:flex}}
+.hero-agent-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 20px}
+.hero-agent-right{
+  width:220px;flex:none;border-left:1px solid var(--border);padding:18px;background:var(--bg-elevated);
+  display:none;flex-direction:column;gap:14px;
+}
+@media (min-width:1040px){.hero-agent-right{display:flex}}
+.plan-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);padding:4px 0}
+.plan-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.plan-dot.done{background:var(--success)}
+.plan-dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.plan-dot.pending{background:var(--text-mute)}
+.metric-box{padding:10px;background:var(--bg-inset);border:1px solid var(--border);border-radius:8px}
+.metric-box .l{font-family:var(--mono);font-size:10px;color:var(--text-3);letter-spacing:.08em}
+.metric-box .v{font-family:var(--mono);font-size:13px;color:var(--text);margin-top:3px;font-weight:500}
+
+/* view: diff hero */
+.hero-diff-view{display:flex;width:100%;background:var(--bg)}
+.hero-diff-side{
+  width:220px;flex:none;border-right:1px solid var(--border);padding:16px;background:var(--bg-elevated);display:none;
+}
+@media (min-width:800px){.hero-diff-side{display:block}}
+.hero-diff-main{flex:1;min-width:0;padding:20px;overflow-y:auto}
+
+/* view: context hero */
+.hero-ctx-view{display:flex;width:100%;padding:20px;gap:20px;background:var(--bg)}
+.ctx-chunk{
+  padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-elevated);margin-bottom:10px;
+}
+.ctx-chunk-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+
+/* values */
+.values{
+  display:grid;grid-template-columns:1fr;gap:0;
+  border-top:1px solid var(--border);
+}
+@media (min-width:860px){.values{grid-template-columns:repeat(3,1fr)}}
+.value{
+  padding:48px 32px 48px 0;
+  border-bottom:1px solid var(--border);
+}
+@media (min-width:860px){
+  .value{border-bottom:none;border-right:1px solid var(--border);padding:8px 40px 8px 0}
+  .value:last-child{border-right:none;padding-right:0}
+  .value:not(:first-child){padding-left:40px}
+}
+.value .num{
+  font-family:var(--mono);font-size:12px;color:var(--accent);
+  letter-spacing:.08em;margin-bottom:28px;
+}
+.value h3{
+  font-size:1.35rem;font-weight:600;letter-spacing:-.03em;line-height:1.2;margin-bottom:14px;
+}
+.value p{color:var(--text-2);font-size:1rem;line-height:1.65;max-width:34ch}
+
+/* ========== COMPARISON SECTION: Chatbot vs Ledger ========== */
+.compare-box{
+  border:1px solid var(--border);border-radius:24px;overflow:hidden;
+  background:var(--bg-elevated);
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
+}
+.compare-header-row{
+  display:grid;grid-template-columns:1.2fr 1fr 1fr;
+  padding:20px 24px;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+  font-weight:600;font-size:13.5px;
+}
+.compare-row{
+  display:grid;grid-template-columns:1.2fr 1fr 1fr;
+  padding:22px 24px;border-bottom:1px solid var(--border);
+  align-items:flex-start;gap:20px;
+}
+.compare-row:last-child{border-bottom:none}
+.compare-dim{font-weight:600;font-size:14px;color:var(--text)}
+.compare-dim span{display:block;font-size:12px;color:var(--text-3);font-weight:400;margin-top:4px}
+.compare-bad{color:var(--text-3);font-size:13.5px;line-height:1.5}
+.compare-good{color:var(--text);font-size:13.5px;line-height:1.5}
+.compare-good strong{color:var(--accent);font-weight:550}
+@media (max-width:760px){
+  .compare-header-row{display:none}
+  .compare-row{grid-template-columns:1fr;gap:12px}
+  .compare-bad{padding:10px 14px;background:rgba(255,255,255,.02);border-radius:8px}
+  .compare-good{padding:10px 14px;background:var(--accent-wash);border-radius:8px;border:1px solid rgba(91,141,239,.25)}
+}
+
+/* ========== dynamic feature showcase ========== */
+.showcase{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:
+    radial-gradient(800px 400px at 80% 0%, rgba(91,141,239,.1), transparent 55%),
+    var(--bg-elevated);
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
+}
+.showcase-tabs{
+  display:flex;gap:6px;padding:14px;border-bottom:1px solid var(--border);
+  overflow-x:auto;scrollbar-width:none;
+}
+.showcase-tabs::-webkit-scrollbar{display:none}
+.showcase-tab{
+  flex:none;padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:550;
+  color:var(--text-3);border:1px solid transparent;transition:all .2s var(--ease);
+}
+.showcase-tab:hover{color:var(--text-2);background:rgba(255,255,255,.03)}
+.showcase-tab.active{
+  color:var(--text);background:rgba(255,255,255,.06);border-color:var(--border-strong);
+}
+.showcase-body{display:grid;gap:0}
+@media (min-width:960px){
+  .showcase-body{grid-template-columns:minmax(280px, .85fr) 1.25fr;min-height:500px}
+}
+.showcase-copy{
+  padding:40px 36px 48px;
+  border-bottom:1px solid var(--border);
+  display:flex;flex-direction:column;justify-content:center;
+}
+@media (min-width:960px){
+  .showcase-copy{border-bottom:none;border-right:1px solid var(--border);padding:48px 40px}
+}
+.showcase-panel{display:none;animation:panelIn .45s var(--ease)}
+.showcase-panel.active{display:block}
+@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.showcase-copy .lbl{margin-bottom:16px}
+.showcase-copy h3{
+  font-size:clamp(1.5rem, 2.4vw, 1.9rem);font-weight:600;
+  letter-spacing:-.035em;line-height:1.15;margin-bottom:16px;
+}
+.showcase-copy > p{color:var(--text-2);font-size:1.02rem;line-height:1.7;margin-bottom:28px}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:14px}
+.feature-list li{
+  display:flex;gap:12px;align-items:flex-start;
+  font-size:14.5px;color:var(--text-2);line-height:1.45;
+}
+.feature-list li::before{
+  content:'';width:7px;height:7px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 12px rgba(91,141,239,.55);
+  margin-top:7px;flex:none;
+}
+
+.stage{
+  position:relative;padding:28px;min-height:440px;
+  background:
+    linear-gradient(180deg, transparent, rgba(0,0,0,.35)),
+    radial-gradient(circle at 30% 20%, rgba(91,141,239,.08), transparent 45%);
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-glow{
+  position:absolute;inset:20% 15%;
+  background:radial-gradient(circle, rgba(91,141,239,.18), transparent 70%);
+  filter:blur(30px);pointer-events:none;
+}
+.preview{
+  position:relative;width:100%;max-width:540px;
+  border:1px solid var(--border-strong);border-radius:14px;
+  background:rgba(10,10,11,.92);backdrop-filter:blur(8px);
+  overflow:hidden;
+  box-shadow:
+    0 24px 80px -24px rgba(0,0,0,.9),
+    0 0 0 1px rgba(255,255,255,.04) inset;
+  transform:perspective(1000px) rotateY(-4deg) rotateX(2deg);
+  transition:transform .5s var(--ease);
+}
+.showcase:hover .preview{transform:perspective(1000px) rotateY(-1deg) rotateX(1deg)}
+.preview-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+}
+.activity{
+  display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);
+  align-items:flex-start;
+}
+.activity:last-child{border-bottom:none}
+.activity.live-row{background:var(--accent-wash)}
+.atag{
+  flex:none;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;
+  padding:3px 7px;border-radius:4px;background:rgba(255,255,255,.03);color:var(--text-3);
+  border:1px solid var(--border);margin-top:2px;
+}
+.atag.READ{color:var(--info);border-color:rgba(107,163,232,.3)}
+.atag.EDIT{color:var(--accent);border-color:rgba(91,141,239,.35)}
+.atag.RUN{color:var(--warning);border-color:rgba(224,160,58,.3)}
+.atag.PLAN{color:var(--text-3)}
+.atitle{font-size:13px;color:var(--text);font-weight:500}
+.adetail{font-family:var(--mono);font-size:11px;color:var(--text-3);margin-top:3px}
+.astatus{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:500;flex:none;margin-top:2px}
+.astatus.done{color:var(--success)}.astatus.running{color:var(--accent)}.astatus.approved{color:var(--info)}
+.approvalcard{
+  margin:12px 16px;padding:14px;background:var(--warning-wash);
+  border:1px solid rgba(224,160,58,.45);border-radius:10px;
+}
+.approvalcard .t{font-size:13px;font-weight:600;margin-bottom:4px}
+.approvalcard .d{font-size:12px;color:var(--text-2);font-family:var(--mono);margin-bottom:12px}
+.approvalcard .btns{display:flex;gap:8px}
+
+.hunk{margin:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.hunk-head{
+  display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+  background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);
+}
+.hunk-head .loc{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.dline{display:flex;font-family:var(--mono);font-size:12px;padding:2px 0}
+.dline .m{width:20px;flex:none;text-align:center;color:var(--text-3)}
+.dline .t{white-space:pre;padding-right:14px}
+.dline.add{background:var(--success-wash)}.dline.add .m{color:var(--success)}
+.dline.del{background:var(--danger-wash)}.dline.del .m{color:var(--danger)}
+.dline.ctx .t{color:var(--text-2)}
+
+.mode-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:16px}
+@media (min-width:520px){.mode-grid{grid-template-columns:repeat(3,1fr)}}
+.mode-card{
+  padding:14px;border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.35);
+  display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:all .2s ease;
+}
+.mode-card:hover{border-color:var(--border-strong)}
+.mode-card.sel{border-color:rgba(91,141,239,.55);background:var(--accent-wash)}
+.mode-card .t{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:8px}
+.mode-card .d{font-size:11.5px;color:var(--text-3);line-height:1.45}
+.radio{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border-strong);position:relative;flex:none}
+.mode-card.sel .radio{border-color:var(--accent)}
+.mode-card.sel .radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+
+.provider-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:0 16px 16px}
+@media (min-width:520px){.provider-grid{grid-template-columns:repeat(3,1fr)}}
+.provider-card{padding:14px;border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.35);transition:border-color .2s ease}
+.provider-card.failover{border-color:var(--warning);background:var(--warning-wash)}
+.provider-card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.provider-card .name{font-weight:600;font-size:13px}
+.kv{display:flex;justify-content:space-between;font-size:11.5px;padding:6px 0;border-top:1px solid var(--border)}
+.kv .k{color:var(--text-3)}.kv .v{color:var(--text-2);font-family:var(--mono)}
+
+/* ========== LOCKED TECH STACK ARCHITECTURE VISUAL ========== */
+.arch{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:48px 28px 56px;
+  background:
+    radial-gradient(700px 300px at 50% 0%, rgba(91,141,239,.12), transparent 60%),
+    var(--bg-elevated);
+  overflow:hidden;
+}
+.arch::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse at center, #000 20%, transparent 75%);
+  pointer-events:none;
+}
+.arch-flow{
+  position:relative;z-index:1;
+  display:grid;gap:18px;
+  max-width:1080px;margin:0 auto;
+}
+@media (min-width:960px){
+  .arch-flow{
+    grid-template-columns:1.2fr auto 1.1fr auto 1fr;
+    align-items:stretch;gap:14px;
+  }
+}
+.arch-col{display:flex;flex-direction:column;gap:12px}
+.arch-node{
+  position:relative;
+  padding:22px 20px;
+  border-radius:16px;
+  border:1px solid var(--border-strong);
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(6px);
+  transition:border-color .25s var(--ease), transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.arch-node:hover{
+  border-color:rgba(91,141,239,.45);
+  transform:translateY(-3px);
+  box-shadow:0 16px 40px -20px rgba(91,141,239,.35);
+}
+.arch-node .lbl{margin-bottom:10px}
+.arch-node strong{
+  display:block;font-size:1.2rem;font-weight:650;letter-spacing:-.03em;margin-bottom:8px;
+}
+.arch-node span{display:block;font-size:13.5px;color:var(--text-3);line-height:1.5}
+.arch-node.accent{
+  border-color:rgba(91,141,239,.4);
+  background:linear-gradient(160deg, rgba(91,141,239,.14), rgba(0,0,0,.55));
+}
+.arch-node.local-bound{
+  border-color:rgba(62,207,142,.35);
+  background:linear-gradient(160deg, rgba(62,207,142,.08), rgba(0,0,0,.55));
+}
+.arch-bridge{
+  display:none;align-items:center;justify-content:center;color:var(--text-mute);
+  font-family:var(--mono);font-size:18px;padding-top:36px;
+}
+@media (min-width:960px){.arch-bridge{display:flex}}
+.arch-bridge svg{width:28px;height:28px;opacity:.45}
+.arch-pulse{
+  position:absolute;top:18px;right:18px;width:8px;height:8px;border-radius:50%;
+  background:var(--success);box-shadow:0 0 0 0 rgba(62,207,142,.5);
+  animation:pulse 2.2s ease-out infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(62,207,142,.45)}
+  70%{box-shadow:0 0 0 12px rgba(62,207,142,0)}
+  100%{box-shadow:0 0 0 0 rgba(62,207,142,0)}
+}
+.arch-caption{
+  position:relative;z-index:1;text-align:center;
+  margin:36px auto 0;max-width:58ch;color:var(--text-3);font-size:14.5px;line-height:1.65;
+}
+
+/* pricing */
+.pricing-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:960px){
+  .pricing-grid{grid-template-columns:repeat(3,1fr);align-items:stretch;gap:18px}
+}
+.price-tier{
+  display:flex;flex-direction:column;padding:32px 28px;
+  border:1px solid var(--border);border-radius:20px;
+  background:rgba(255,255,255,.02);
+  transition:border-color .25s var(--ease), transform .25s var(--ease);
+}
+.price-tier:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+.price-tier.featured{
+  border-color:rgba(255,255,255,.18);
+  background:
+    radial-gradient(400px 200px at 50% 0%, rgba(91,141,239,.16), transparent 60%),
+    rgba(255,255,255,.035);
+  box-shadow:0 0 0 1px rgba(255,255,255,.04) inset;
+}
+@media (min-width:960px){
+  .price-tier.featured{transform:scale(1.03);z-index:1}
+  .price-tier.featured:hover{transform:scale(1.03) translateY(-2px)}
+}
+.price-tier .tier-lbl{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px}
+.price-tier h3{margin-top:18px;font-size:1.75rem;font-weight:650;letter-spacing:-.035em}
+.price-amount{margin-top:18px;font-family:var(--mono)}
+.price-amount .amt{font-size:2.75rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+.price-amount .per{font-size:13px;color:var(--text-3);margin-left:4px}
+.price-desc{margin-top:16px;color:var(--text-2);font-size:.98rem;line-height:1.6;min-height:3.2em}
+.price-tier ul{
+  list-style:none;margin:28px 0 0;padding:0;
+  display:flex;flex-direction:column;gap:0;flex:1;
+}
+.price-tier li{
+  display:flex;gap:12px;align-items:flex-start;font-size:14px;color:var(--text-2);
+  padding:12px 0;border-top:1px solid var(--border);line-height:1.45;
+}
+.price-tier li:first-child{border-top:none;padding-top:0}
+.check{
+  width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.06);color:var(--text);
+  display:grid;place-items:center;flex:none;margin-top:1px;
+}
+.check svg{width:10px;height:10px}
+.price-tier .btn{margin-top:28px;width:100%}
+.privacy-callout{
+  margin-top:18px;padding:14px 16px;border-radius:12px;
+  border:1px solid rgba(62,207,142,.35);background:var(--success-wash);
+  font-size:13.5px;color:var(--text);line-height:1.55;
+}
+.privacy-callout strong{font-family:var(--mono);font-weight:600;color:var(--success)}
+
+/* ========== FAQ SECTION ========== */
+.faq-grid{
+  display:grid;grid-template-columns:1fr;gap:14px;max-width:860px;margin:0 auto;
+}
+.faq-card{
+  border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02);
+  padding:20px 24px;cursor:pointer;transition:border-color .2s ease, background .2s ease;
+}
+.faq-card:hover{border-color:var(--border-strong);background:rgba(255,255,255,.03)}
+.faq-card.open{border-color:rgba(91,141,239,.4);background:rgba(255,255,255,.035)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:15px;gap:16px}
+.faq-icon{font-family:var(--mono);font-size:14px;color:var(--text-3);transition:transform .2s ease}
+.faq-card.open .faq-icon{transform:rotate(45deg);color:var(--accent)}
+.faq-a{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:14px;color:var(--text-2);line-height:1.65;display:none;
+}
+.faq-card.open .faq-a{display:block}
+
+/* final cta & download */
+.final{
+  border:1px solid var(--border);border-radius:24px;overflow:hidden;text-align:center;
+  padding:80px 40px;
+  background:
+    radial-gradient(700px 280px at 50% 0%, rgba(91,141,239,.18), transparent 55%),
+    var(--bg-elevated);
+}
+.final .lbl{justify-content:center}
+.final h2{
+  margin:18px 0 0;font-size:clamp(1.85rem, 3.5vw, 2.75rem);
+  font-weight:600;letter-spacing:-.04em;line-height:1.1;
+}
+.final p{margin:18px auto 0;max-width:48ch;color:var(--text-2);font-size:1.05rem;line-height:1.65}
+.download-grid{
+  display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;
+  max-width:800px;margin:36px auto 0;text-align:left;
+}
+.download-card{
+  padding:20px;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.4);
+  display:flex;flex-direction:column;gap:12px;
+}
+.download-card .os{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px}
+.download-card .specs{font-family:var(--mono);font-size:11.5px;color:var(--text-3)}
+.web-demo-card{
+  border:1px solid rgba(91,141,239,.35);background:var(--accent-wash);border-radius:16px;
+  padding:24px;max-width:700px;margin:32px auto 0;display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:16px;text-align:left;
+}
+
+/* footer */
+.site-footer{
+  position:relative;z-index:1;border-top:1px solid var(--border);
+  padding:36px 0 48px;color:var(--text-3);font-size:13px;
+}
+.site-footer .inner{
+  width:min(100% - 48px, var(--max));margin-inline:auto;
+  display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;
+}
+.site-footer nav{display:flex;flex-wrap:wrap;gap:22px}
+.site-footer a:hover{color:var(--text-2)}
+
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .7s var(--ease), transform .7s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+
+@media (max-width:720px){
+  .nav-links{display:none}
+  .hero{padding-top:56px;min-height:auto}
+  .section{padding:96px 0}
+  .section-head{margin-bottom:48px}
+  .ide-shell{width:min(100% - 16px, 1180px);border-radius:12px 12px 0 0}
+  .preview{transform:none!important}
+  .final{padding:56px 20px}
+  .value{padding:36px 0}
+  .arch{padding:36px 18px 44px;border-radius:18px}
+}
+</style>
+</head>
+<body>
+<div class="page-bg" aria-hidden="true"></div>
+
+<header class="site-nav" id="siteNav">
+  <div class="inner">
+    <a class="brand" href="#top" aria-label="Ledger home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 4h14v3H5zm0 6.5h14V20H5z"/></svg>
+      </span>
+      Ledger
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#product">Product</a>
+      <a href="#compare">Why Ledger</a>
+      <a href="#features">Features</a>
+      <a href="#stack">Stack</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn sm btn-demo" href="Ledger IDE.html" target="_blank" title="Test drive the full IDE in your browser"><span class="dot blink" style="color:var(--accent)"></span> Live Demo ↗</a>
+      <a class="btn sm ghost" href="#pricing">Plans</a>
+      <a class="btn sm primary" href="#download">Download</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="lbl"><span class="dot blink" style="color:var(--accent)"></span> Desktop-First · TypeScript Everywhere · Structural Mono</div>
+      <p class="hero-brand">Ledger</p>
+      <h1>Code with an agent you can audit — your code stays on your machine.</h1>
+      <p class="hero-lead">A desktop-first IDE where the local agent runtime executes file edits, git commands, and shell tools on your workstation. The cloud only handles identity, quotas, billing, and LLM proxies — never your source code.</p>
+      <div class="hero-cta">
+        <a class="btn accent" href="Ledger IDE.html" target="_blank" style="padding:13px 24px;gap:10px">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
+          Try Live Web Demo ↗
+        </a>
+        <a class="btn primary" href="#download">Download for desktop</a>
+        <a class="btn ghost" href="#features">See feature previews</a>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="hero-meta">
+        <span class="pill ok"><span class="dot"></span>Code stays local</span>
+        <span class="pill live">Controlled Auto-run</span>
+        <span class="chip">TypeScript · Electron · React · Monaco · Clerk · Stripe</span>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE HERO IDE STAGE -->
+    <div class="product-stage" id="product" aria-label="Ledger IDE interactive preview">
+      <div class="ide-shell">
+        <div class="titlebar">
+          <div class="tb-left">
+            <div class="tb-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="tb-path mono">ledger <span style="color:var(--text-mute)">—</span> <b>payments-service</b></div>
+          </div>
+          <div class="tb-right">
+            <span class="pill ok"><span class="dot"></span>Local runtime: active</span>
+            <span class="pill live">Controlled Auto-run</span>
+            <a class="btn sm" href="Ledger IDE.html" target="_blank" style="padding:3px 10px;font-size:11px;border-radius:6px;background:rgba(255,255,255,.05);border-color:var(--border-strong);color:var(--text)">Open Full IDE ↗</a>
+          </div>
+        </div>
+
+        <div class="ide-body">
+          <!-- NAV RAIL: CLICKABLE SWITCHER -->
+          <div class="navrail" id="heroNavRail" aria-label="IDE View navigation">
+            <button class="navbtn active" data-hero-view="code" title="Monaco Editor & Terminal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
+              <span>Code</span>
+            </button>
+            <button class="navbtn" data-hero-view="agent" title="Agent Command Center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v3M12 18v3M4.2 7.8l2.6 1.5M17.2 14.7l2.6 1.5M4.2 16.2l2.6-1.5M17.2 9.3l2.6-1.5"/><circle cx="12" cy="12" r="4.2"/></svg>
+              <span>Agent</span>
+            </button>
+            <button class="navbtn" data-hero-view="diff" title="Diff Review & Rollback">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 4v12a2 2 0 0 0 2 2h8M8 4l-3 3M8 4l3 3M16 20l3-3M16 20l-3-3"/></svg>
+              <span>Diff</span>
+            </button>
+            <button class="navbtn" data-hero-view="context" title="Local Context Engine">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <span>Context</span>
+            </button>
+          </div>
+
+          <!-- HERO VIEW CONTAINER -->
+          <div class="hero-view-container">
+            <!-- VIEW 1: CODE / WORKSPACE (Monaco + xterm.js) -->
+            <div class="hero-view active" id="heroView-code">
+              <div class="explorer">
+                <div class="explorer-head"><span class="lbl">Explorer (FS)</span></div>
+                <div class="frow"><span>▾</span> src</div>
+                <div class="frow" style="padding-left:28px">routes</div>
+                <div class="frow active" style="padding-left:40px">password-reset.ts</div>
+                <div class="frow" style="padding-left:28px">services</div>
+                <div class="frow" style="padding-left:40px">auth.service.ts</div>
+                <div class="frow" style="padding-left:40px">mailer.ts</div>
+              </div>
+
+              <div class="editorcol">
+                <div class="tabs">
+                  <div class="tab active">password-reset.ts</div>
+                  <div class="tab">auth.service.ts</div>
+                </div>
+                <div class="breadcrumb">src / routes / <b>password-reset.ts</b> <span class="mono" style="font-size:10px;color:var(--text-3);margin-left:8px">(Monaco)</span></div>
+                <div class="codearea">
+                  <div class="codeline"><span class="ln">7</span><span class="code"><span class="tok-kw">export async function</span> <span class="tok-fn">requestReset</span>(email: <span class="tok-str">string</span>) {</span></div>
+                  <div class="codeline"><span class="ln">8</span><span class="code">  <span class="tok-kw">const</span> token = <span class="tok-fn">crypto</span>.randomUUID()</span></div>
+                  <div class="codeline"><span class="ln">9</span><span class="code">  <span class="tok-kw">await</span> store.put({ email, token, exp: <span class="tok-num">3600</span> })</span></div>
+                  <div class="codeline"><span class="ln">10</span><span class="code">  <span class="tok-kw">await</span> mailer.sendReset(email, token)</span></div>
+                  <div class="codeline"><span class="ln">11</span><span class="code">  <span class="tok-com">// local agent runtime: verification via node-pty</span></span></div>
+                  <div class="codeline"><span class="ln">12</span><span class="code">}</span></div>
+                </div>
+                <div class="panelbar"><span class="seg active">TERMINAL · xterm.js</span><span class="seg">node-pty PTY 1</span><span class="seg">PROBLEMS · 0</span></div>
+                <div class="terminal">
+                  <div class="termline cmd">pnpm test auth</div>
+                  <div class="termline ok">✓ password-reset · 4 passed (12ms)</div>
+                  <div class="termline">Local Git: branch 'main' · clean working tree</div>
+                </div>
+                <div class="statusbar">
+                  <div class="grp"><span>main ↑2</span><span>TypeScript</span><span>Monaco Editor</span></div>
+                  <div class="grp"><span>Ln 9, Col 42</span><span>UTF-8</span></div>
+                </div>
+              </div>
+
+              <div class="agentteaser">
+                <span class="lbl">Ask Local Agent</span>
+                <div style="font-size:12px;color:var(--text-3);margin-top:6px;line-height:1.45">Prompts run against the local filesystem &amp; git tools.</div>
+                <div class="teaser-ask">
+                  <textarea readonly id="heroTeaserInput">Add password reset flow with token expiry and rate limiting.</textarea>
+                  <button class="btn btn-ask-hero" id="heroBtnAsk">Ask in Agent Command Center →</button>
+                </div>
+                <div style="margin-top:18px" class="flexcol">
+                  <span class="lbl" style="font-size:9.5px">Runtime status</span>
+                  <div style="font-size:11.5px;color:var(--success);margin-top:6px">✓ Local agent daemon active</div>
+                  <div style="font-size:11.5px;color:var(--text-3);margin-top:4px">FS &amp; git access scoped locally</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 2: AGENT VIEW (Local Runtime + Activity Ledger) -->
+            <div class="hero-view" id="heroView-agent">
+              <div class="hero-agent-view">
+                <div class="hero-agent-left">
+                  <span class="lbl">Local execution plan</span>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div class="plan-item"><span class="plan-dot done"></span><span>Draft reset flow interface</span></div>
+                    <div class="plan-item"><span class="plan-dot done"></span><span>FS: read auth.service.ts</span></div>
+                    <div class="plan-item"><span class="plan-dot active"></span><span style="color:var(--text);font-weight:500">FS: edit password-reset.ts</span></div>
+                    <div class="plan-item"><span class="plan-dot pending"></span><span>PTY: pnpm test auth</span></div>
+                  </div>
+                  <div style="margin-top:14px">
+                    <span class="lbl">Customer Machine Scope</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+                      <span class="chip">FS: read/write</span>
+                      <span class="chip">git: status/diff</span>
+                      <span class="chip">node-pty: test</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="hero-agent-main">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border)">
+                    <span class="lbl">Auditable Activity Ledger</span>
+                    <span class="mono" style="font-size:11px;color:var(--text-3)">Model Gateway: claude-3-5-sonnet</span>
+                  </div>
+                  <div style="overflow-y:auto;flex:1">
+                    <div class="activity">
+                      <span class="atag PLAN">PLAN</span>
+                      <div><div class="atitle">Draft password-reset flow</div><div class="adetail">4 steps · local workspace scoped</div></div>
+                      <span class="astatus done">done</span>
+                    </div>
+                    <div class="activity">
+                      <span class="atag READ">READ</span>
+                      <div><div class="atitle">FS: auth.service.ts</div><div class="adetail">Local disk read · 142 lines</div></div>
+                      <span class="astatus done">done</span>
+                    </div>
+                    <div class="activity live-row">
+                      <span class="atag EDIT">EDIT</span>
+                      <div><div class="atitle">FS: password-reset.ts</div><div class="adetail">+48 −0 · local staging</div></div>
+                      <span class="astatus running">running</span>
+                    </div>
+                    <div class="approvalcard" id="heroApprovalCard">
+                      <div class="t">Approval required before shell call</div>
+                      <div class="d">node-pty: pnpm install nodemailer</div>
+                      <div class="btns">
+                        <button class="btn sm primary" id="heroApproveBtn" style="border-radius:6px">Approve command</button>
+                        <button class="btn sm" id="heroRejectBtn" style="border-radius:6px">Reject</button>
+                      </div>
+                    </div>
+                    <div class="activity">
+                      <span class="atag RUN">RUN</span>
+                      <div><div class="atitle">PTY: pnpm test auth</div><div class="adetail">xterm.js session · local process</div></div>
+                      <span class="astatus approved" id="heroRunStatus">queued</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="hero-agent-right">
+                  <span class="lbl">Quota Telemetry</span>
+                  <div class="metric-box"><div class="l">REDIS QUOTA</div><div class="v">3 / 20 steps</div></div>
+                  <div class="metric-box"><div class="l">GATEWAY TOKENS</div><div class="v">12.4k prompt · 890 out</div></div>
+                  <div class="metric-box"><div class="l">METERED USAGE</div><div class="v">$0.04 (Stripe)</div></div>
+                  <div class="metric-box"><div class="l">AUTH IDENTITY</div><div class="v" style="color:var(--accent)">Clerk User ID</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 3: DIFF VIEW -->
+            <div class="hero-view" id="heroView-diff">
+              <div class="hero-diff-view">
+                <div class="hero-diff-side">
+                  <span class="lbl">Changed files (2)</span>
+                  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                    <div class="chip" style="justify-content:space-between;width:100%;border-radius:8px">
+                      <span>password-reset.ts</span>
+                      <span class="mono" style="color:var(--success)">+48 −0</span>
+                    </div>
+                    <div class="chip" style="justify-content:space-between;width:100%;border-radius:8px;background:rgba(255,255,255,.05)">
+                      <span>auth.service.ts</span>
+                      <span class="mono"><span style="color:var(--success)">+12</span> <span style="color:var(--danger)">−3</span></span>
+                    </div>
+                  </div>
+                  <div style="margin-top:24px">
+                    <span class="lbl">Checkpoint</span>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:6px">Pre-task local git snapshot saved 2m ago</div>
+                    <button class="btn sm" style="width:100%;margin-top:10px;border-radius:6px;justify-content:center" onclick="alert('Rollback simulated: workspace restored to pre-task snapshot.')">1-Click Rollback</button>
+                  </div>
+                </div>
+
+                <div class="hero-diff-main">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <div>
+                      <span class="mono" style="font-size:13px;font-weight:600">src/routes/password-reset.ts</span>
+                      <div style="font-size:11.5px;color:var(--text-3)">Hunk 1 of 1 · +48 lines</div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn sm" onclick="alert('Hunk rejected.')">Reject hunk</button>
+                      <button class="btn sm primary" onclick="alert('Hunk accepted into working tree.')">Accept hunk</button>
+                    </div>
+                  </div>
+                  <div class="hunk" style="margin:0">
+                    <div class="hunk-head"><span class="loc">@@ −1,4 +1,12 @@</span><span class="pill live">pending apply</span></div>
+                    <div class="dline ctx"><span class="m"> </span><span class="t">import { store } from '../db'</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">import { mailer } from '../mailer'</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">import { rateLimit } from '../guard'</span></div>
+                    <div class="dline ctx"><span class="m"> </span><span class="t"></span></div>
+                    <div class="dline del"><span class="m">-</span><span class="t">// TODO: implement password reset</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">export async function requestReset(email: string) {</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">  await rateLimit(email)</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">  const token = crypto.randomUUID()</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">  await store.put({ email, token, exp: 3600 })</span></div>
+                    <div class="dline add"><span class="m">+</span><span class="t">}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 4: CONTEXT ENGINE -->
+            <div class="hero-view" id="heroView-context">
+              <div class="hero-ctx-view">
+                <div style="flex:1">
+                  <span class="lbl">Prompt context chunks for model gateway</span>
+                  <div style="margin-top:12px">
+                    <div class="ctx-chunk">
+                      <div class="ctx-chunk-head">
+                        <span class="mono" style="font-size:12px;font-weight:600">src/services/auth.service.ts</span>
+                        <span class="pill ok">Relevance: 0.94</span>
+                      </div>
+                      <div class="mono" style="font-size:11px;color:var(--text-3)">lines 42–89 · User auth session validation and hashing</div>
+                    </div>
+                    <div class="ctx-chunk">
+                      <div class="ctx-chunk-head">
+                        <span class="mono" style="font-size:12px;font-weight:600">src/mailer.ts</span>
+                        <span class="pill ok">Relevance: 0.88</span>
+                      </div>
+                      <div class="mono" style="font-size:11px;color:var(--text-3)">lines 10–38 · SMTP transporter & sendReset template</div>
+                    </div>
+                    <div class="ctx-chunk">
+                      <div class="ctx-chunk-head">
+                        <span class="mono" style="font-size:12px;font-weight:600">src/guard.ts</span>
+                        <span class="pill">Relevance: 0.79</span>
+                      </div>
+                      <div class="mono" style="font-size:11px;color:var(--text-3)">lines 1–25 · Redis sliding-window rate limiter</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="width:280px;flex:none;display:flex;flex-direction:column;gap:12px">
+                  <span class="lbl">Zero Whole-Repo Uploads</span>
+                  <div style="font-size:12px;color:var(--text-2);line-height:1.55">
+                    Your code stays on your machine. Only the selected snippet chunks leave for model gateway inference.
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+                    <div class="chip" style="justify-content:space-between"><span>node_modules/</span><span class="mono" style="color:var(--text-3)">local only</span></div>
+                    <div class="chip" style="justify-content:space-between"><span>.env* (secrets)</span><span class="mono" style="color:var(--danger)">redacted</span></div>
+                    <div class="chip" style="justify-content:space-between"><span>dist/ / build/</span><span class="mono" style="color:var(--text-3)">ignored</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VALUES ================= -->
+  <section class="section" id="values">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">Product Architecture</span>
+        <h2>Desktop-first. Code stays on the customer machine.</h2>
+        <p>Three core architectural principles govern Ledger — not a generic marketing checklist.</p>
+      </div>
+      <div class="values reveal">
+        <article class="value">
+          <div class="num">01 / AUDIT</div>
+          <h3>Local agent runtime</h3>
+          <p>Every READ, EDIT, RUN, and APPROVAL is executed on your local machine and logged into an auditable ledger — never a remote black box.</p>
+        </article>
+        <article class="value">
+          <div class="num">02 / CONTROL</div>
+          <h3>Permissions before execution</h3>
+          <p>Suggest, Approve, or Controlled Auto-run. Destructive edits and shell tools running through node-pty stop for your explicit sign-off.</p>
+        </article>
+        <article class="value">
+          <div class="num">03 / PRIVACY</div>
+          <h3>Code never leaves your box</h3>
+          <p>The cloud control plane handles only identity via Clerk, quotas via Redis, and billing via Stripe. Your source tree is never mirrored or stored remotely.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARISON: CHATBOT VS LEDGER ================= -->
+  <section class="section" id="compare" style="padding-top:40px">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">The Architectural Shift</span>
+        <h2>Stop wrestling chat dumps. Start auditing a ledger.</h2>
+        <p>Cloud-hosted conversational assistants scrape and ingest your repo into a chat window. Ledger operates as a desktop-first IDE where all tooling runs locally on your machine.</p>
+      </div>
+
+      <div class="compare-box reveal">
+        <div class="compare-header-row">
+          <div>Capability</div>
+          <div style="color:var(--text-3)">Chat-Based AI IDEs & Copilots</div>
+          <div style="color:var(--accent)">Ledger Desktop-First IDE</div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-dim">
+            Code Location &amp; Privacy
+            <span>Where files live and execute</span>
+          </div>
+          <div class="compare-bad">
+            Entire codebase mirrored to cloud servers. High risk of telemetry and code training.
+          </div>
+          <div class="compare-good">
+            <strong>100% on customer machine</strong>: Local agent runtime executes filesystem, git, and shell tools locally. Cloud only does identity, billing, and LLM proxy.
+          </div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-dim">
+            Agent Visibility
+            <span>How work is presented to the engineer</span>
+          </div>
+          <div class="compare-bad">
+            Unstructured chat scrollback. Tool decisions, terminal output, and conversational prose are mixed together.
+          </div>
+          <div class="compare-good">
+            <strong>Structured activity ledger</strong>: Typed rows (<span class="mono">PLAN</span>, <span class="mono">READ</span>, <span class="mono">EDIT</span>, <span class="mono">RUN</span>, <span class="mono">APPROVAL</span>) with exact token and step budgets.
+          </div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-dim">
+            Code Modifications
+            <span>Reviewing what was changed</span>
+          </div>
+          <div class="compare-bad">
+            Silent multi-file writes or raw markdown code blocks scattered across message history.
+          </div>
+          <div class="compare-good">
+            <strong>Monaco &amp; Hunk Diffs</strong>: Review syntax-highlighted additions and deletions with independent accept/reject control before anything touches disk.
+          </div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-dim">
+            Terminal &amp; Shell Safety
+            <span>Command execution environment</span>
+          </div>
+          <div class="compare-bad">
+            Blind auto-execution or annoying modal prompts on every single trivial file inspection.
+          </div>
+          <div class="compare-good">
+            <strong>xterm.js + node-pty sandbox</strong>: Real native pseudo-terminal with scoped allowlists and granular autonomy modes (<span class="mono">Suggest</span>, <span class="mono">Approve</span>, <span class="mono">Auto-run</span>).
+          </div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-dim">
+            Disaster Recovery
+            <span>When the agent makes a mistake</span>
+          </div>
+          <div class="compare-bad">
+            "Sorry, let me fix that" — which often introduces more errors. Manual git stashing required.
+          </div>
+          <div class="compare-good">
+            <strong>Pre-Task Checkpoints</strong>: Ledger snapshots your files locally before running a task. 1-click instant rollback cleanly restores the workspace.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURE SHOWCASE ================= -->
+  <section class="section" id="features" style="padding-top:40px">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">Feature previews</span>
+        <h2>Layouts lifted directly from the Ledger shell.</h2>
+        <p>Built with React, Monaco, and xterm.js — test the exact components right here in the landing page.</p>
+      </div>
+
+      <div class="showcase reveal" id="featureShowcase">
+        <div class="showcase-tabs" role="tablist" aria-label="Feature previews">
+          <button class="showcase-tab active" role="tab" aria-selected="true" data-panel="agent">Agent Command Center</button>
+          <button class="showcase-tab" role="tab" aria-selected="false" data-panel="diff">Diff Review &amp; Rollback</button>
+          <button class="showcase-tab" role="tab" aria-selected="false" data-panel="context">Context Engine</button>
+          <button class="showcase-tab" role="tab" aria-selected="false" data-panel="access">Permissions &amp; Autonomy</button>
+          <button class="showcase-tab" role="tab" aria-selected="false" data-panel="models">Model Gateway</button>
+        </div>
+
+        <div class="showcase-body">
+          <div class="showcase-copy">
+            <!-- PANEL 1: AGENT -->
+            <div class="showcase-panel active" data-panel="agent">
+              <span class="lbl">Agent Command Center</span>
+              <h3>Watch the plan execute, line by line.</h3>
+              <p>Tasks open with a structured execution plan and a live activity stream. Approvals surface inline when the agent requests privileged write or network access.</p>
+              <ul class="feature-list">
+                <li>Typed ledger rows: PLAN, READ, EDIT, RUN, APPROVAL</li>
+                <li>Redis-metered step limits and dollar-cost telemetry in real time</li>
+                <li>Inline approval gates for sensitive network and bash calls</li>
+              </ul>
+            </div>
+
+            <!-- PANEL 2: DIFF -->
+            <div class="showcase-panel" data-panel="diff">
+              <span class="lbl">Diff Review &amp; Checkpoints</span>
+              <h3>Accept patches the way you accept PRs.</h3>
+              <p>Hunk-level review with the same syntax-colored additions and deletions used in the desktop IDE. Checkpoints save automatically before each task runs.</p>
+              <ul class="feature-list">
+                <li>Pre-task automated snapshots with 1-click instant rollback</li>
+                <li>Interactive hunk headers with precise source line markers</li>
+                <li>Accept or reject individual changes before they touch disk</li>
+              </ul>
+            </div>
+
+            <!-- PANEL 3: CONTEXT -->
+            <div class="showcase-panel" data-panel="context">
+              <span class="lbl">Context Engine</span>
+              <h3>Full transparency over what leaves your machine.</h3>
+              <p>Know exactly which repository chunks were retrieved for the model, their cosine relevance scores, and verify that secret files remain untouched.</p>
+              <ul class="feature-list">
+                <li>Ranked chunk viewer with relevance metrics (0.0 to 1.0)</li>
+                <li>Automatic exclusion of .env*, node_modules/, and build artifacts</li>
+                <li>Zero whole-repo uploads: only prompt-relevant chunks leave the machine</li>
+              </ul>
+            </div>
+
+            <!-- PANEL 4: ACCESS -->
+            <div class="showcase-panel" data-panel="access">
+              <span class="lbl">Permissions &amp; Autonomy</span>
+              <h3>Autonomy modes tailored to your risk threshold.</h3>
+              <p>Pick how much the agent may do on its own: propose suggestions, wait for approvals on every write, or run autonomously within a strict command allowlist.</p>
+              <ul class="feature-list">
+                <li>Suggest / Approve / Controlled Auto-run modes</li>
+                <li>Scoped command allowlist for test runners and compilers</li>
+                <li>Full audit history of every permission grant and rejection</li>
+              </ul>
+            </div>
+
+            <!-- PANEL 5: MODELS -->
+            <div class="showcase-panel" data-panel="models">
+              <span class="lbl">Multi-Model Gateway</span>
+              <h3>Resilient model routing with automatic failover.</h3>
+              <p>Route planning, chat, and fast completions through Claude, GPT-4o, or local Ollama endpoints. If a provider degrades, failover happens seamlessly.</p>
+              <ul class="feature-list">
+                <li>Provider cards with latency p50, token pricing, and uptime pills</li>
+                <li>Instant failover routing when an upstream API returns 503</li>
+                <li>Bring your own API keys or connect local offline models</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- STAGE PREVIEW -->
+          <div class="stage" aria-hidden="true">
+            <div class="stage-glow"></div>
+
+            <!-- PREVIEW 1: AGENT -->
+            <div class="showcase-panel active" data-panel="agent">
+              <div class="preview">
+                <div class="preview-bar">
+                  <span class="lbl">Agent activity</span>
+                  <span class="mono" style="font-size:11px;color:var(--text-3)">Gateway: Anthropic Claude 3.5</span>
+                </div>
+                <div class="activity">
+                  <span class="atag PLAN">PLAN</span>
+                  <div><div class="atitle">Draft password-reset flow</div><div class="adetail">4 steps · local workspace scoped</div></div>
+                  <span class="astatus done">done</span>
+                </div>
+                <div class="activity">
+                  <span class="atag READ">READ</span>
+                  <div><div class="atitle">FS: auth.service.ts</div><div class="adetail">Local read · 142 lines</div></div>
+                  <span class="astatus done">done</span>
+                </div>
+                <div class="activity live-row">
+                  <span class="atag EDIT">EDIT</span>
+                  <div><div class="atitle">FS: password-reset.ts</div><div class="adetail">+48 −0 · local staging</div></div>
+                  <span class="astatus running">running</span>
+                </div>
+                <div class="approvalcard" id="showcaseApprovalCard">
+                  <div class="t">Approval required</div>
+                  <div class="d">node-pty: mailer.sendReset — outbound SMTP</div>
+                  <div class="btns">
+                    <button class="btn sm primary" id="showcaseApproveBtn" style="border-radius:6px;cursor:pointer">Approve</button>
+                    <button class="btn sm" id="showcaseRejectBtn" style="border-radius:6px;cursor:pointer">Reject</button>
+                  </div>
+                </div>
+                <div class="activity">
+                  <span class="atag RUN">RUN</span>
+                  <div><div class="atitle">PTY: pnpm test auth</div><div class="adetail">xterm.js · vitest runner</div></div>
+                  <span class="astatus approved" id="showcaseRunStatus">queued</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW 2: DIFF -->
+            <div class="showcase-panel" data-panel="diff">
+              <div class="preview">
+                <div class="preview-bar">
+                  <span class="lbl">Diff · password-reset.ts</span>
+                  <span class="mono" style="font-size:11px"><span style="color:var(--success)">+48</span> <span style="color:var(--danger)">−0</span></span>
+                </div>
+                <div style="padding:10px 16px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:12px;color:var(--text-3)">Review: <span id="diffCounter" class="mono" style="color:var(--text)">0 accepted</span></span>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn sm" id="btnDiffReject" style="font-size:11px;padding:3px 8px">Reject</button>
+                    <button class="btn sm primary" id="btnDiffAccept" style="font-size:11px;padding:3px 8px">Accept hunk</button>
+                  </div>
+                </div>
+                <div class="hunk">
+                  <div class="hunk-head"><span class="loc">@@ −1,4 +1,12 @@</span><span class="pill live" id="hunkPill">pending</span></div>
+                  <div class="dline ctx"><span class="m"> </span><span class="t">import { store } from '../db'</span></div>
+                  <div class="dline add"><span class="m">+</span><span class="t">import { mailer } from '../mailer'</span></div>
+                  <div class="dline add"><span class="m">+</span><span class="t">import { rateLimit } from '../guard'</span></div>
+                  <div class="dline ctx"><span class="m"> </span><span class="t"></span></div>
+                  <div class="dline del"><span class="m">-</span><span class="t">// TODO: reset flow</span></div>
+                  <div class="dline add"><span class="m">+</span><span class="t">export async function requestReset(email: string) {</span></div>
+                  <div class="dline add"><span class="m">+</span><span class="t">  await rateLimit(email)</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW 3: CONTEXT -->
+            <div class="showcase-panel" data-panel="context">
+              <div class="preview" style="max-width:540px">
+                <div class="preview-bar">
+                  <span class="lbl">Retrieved Chunks</span>
+                  <span class="pill ok">3 Chunks Active</span>
+                </div>
+                <div style="padding:14px">
+                  <div style="margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:rgba(0,0,0,.3)">
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+                      <span>auth.service.ts:42-89</span>
+                      <span class="mono" style="color:var(--success)">0.94 score</span>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:4px">Matches: "hash password token expiry"</div>
+                  </div>
+                  <div style="margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:rgba(0,0,0,.3)">
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">
+                      <span>mailer.ts:1-35</span>
+                      <span class="mono" style="color:var(--success)">0.88 score</span>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:4px">Matches: "sendReset email transporter"</div>
+                  </div>
+                  <div style="padding:10px;background:rgba(240,113,103,.08);border:1px solid rgba(240,113,103,.25);border-radius:8px;font-size:11.5px;color:var(--text-2)">
+                    <span style="color:var(--danger);font-weight:600">Automatic exclusion applied:</span> .env.production, .env.local, and 4 other secret files were omitted from indexing.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW 4: ACCESS -->
+            <div class="showcase-panel" data-panel="access">
+              <div class="preview" style="max-width:560px">
+                <div class="preview-bar">
+                  <span class="lbl">Permissions &amp; Autonomy</span>
+                  <span class="pill ok"><span class="dot"></span>Ready</span>
+                </div>
+                <div class="mode-grid">
+                  <div class="mode-card" data-mode="suggest">
+                    <div class="t"><span class="radio"></span>Suggest</div>
+                    <div class="d">Reads and proposes patches. No writes without apply.</div>
+                  </div>
+                  <div class="mode-card" data-mode="approve">
+                    <div class="t"><span class="radio"></span>Approve</div>
+                    <div class="d">Each write or command group waits for you.</div>
+                  </div>
+                  <div class="mode-card sel" data-mode="auto">
+                    <div class="t"><span class="radio"></span>Auto-run</div>
+                    <div class="d">Low-risk edits run; privileged actions still ask.</div>
+                  </div>
+                </div>
+                <div style="padding:0 16px 14px">
+                  <div class="card" style="padding:10px 14px;background:rgba(0,0,0,.3);border-radius:8px;font-size:12px;color:var(--text-2)">
+                    <span class="lbl" style="font-size:9.5px">Command allowlist (node-pty)</span>
+                    <div class="mono" style="font-size:11.5px;margin-top:4px;color:var(--accent)">pnpm test, vitest, tsc --noEmit, prettier</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW 5: MODELS -->
+            <div class="showcase-panel" data-panel="models">
+              <div class="preview" style="max-width:560px">
+                <div class="preview-bar">
+                  <span class="lbl">Server-Side Model Gateway</span>
+                  <button class="btn sm" id="btnSimulateFailover" style="font-size:10.5px;padding:3px 8px;border-radius:6px">Simulate Failover</button>
+                </div>
+                <div class="provider-grid" style="margin-top:12px">
+                  <div class="provider-card" id="cardAnthropic">
+                    <div class="top"><span class="name">Anthropic</span><span class="pill ok" id="pillAnthropic"><span class="dot"></span>Online</span></div>
+                    <div class="kv"><span class="k">Model</span><span class="v">Sonnet 3.5</span></div>
+                    <div class="kv"><span class="k">Latency</span><span class="v" id="latAnthropic">640ms</span></div>
+                  </div>
+                  <div class="provider-card" id="cardOpenAI">
+                    <div class="top"><span class="name">OpenAI</span><span class="pill ok"><span class="dot"></span>Online</span></div>
+                    <div class="kv"><span class="k">Model</span><span class="v">GPT-4o</span></div>
+                    <div class="kv"><span class="k">Latency</span><span class="v">410ms</span></div>
+                  </div>
+                  <div class="provider-card">
+                    <div class="top"><span class="name">Google</span><span class="pill ok"><span class="dot"></span>Online</span></div>
+                    <div class="kv"><span class="k">Model</span><span class="v">Gemini 2.0</span></div>
+                    <div class="kv"><span class="k">Latency</span><span class="v">280ms</span></div>
+                  </div>
+                </div>
+                <div id="failoverBanner" style="display:none;margin:0 16px 14px;padding:10px 14px;border-radius:8px;background:var(--warning-wash);border:1px solid rgba(224,160,58,.4);font-size:11.5px;color:var(--text)">
+                  <span style="color:var(--warning);font-weight:600">Automatic Failover Active:</span> Anthropic 503 error detected. Requests routed seamlessly to OpenAI GPT-4o.
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LOCKED TECH STACK ARCHITECTURE ================= -->
+  <section class="section" id="stack">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">Locked Architecture</span>
+        <h2>TypeScript everywhere. Zero code leaves your box.</h2>
+        <p>A desktop-first architecture where the client runs all filesystem, git, and terminal processes. The cloud control plane strictly isolates identity, billing, and server-side LLM proxies.</p>
+      </div>
+
+      <div class="arch reveal">
+        <div class="arch-flow">
+          <!-- TIER 1: DESKTOP CLIENT (CUSTOMER MACHINE) -->
+          <div class="arch-col">
+            <div class="arch-node local-bound">
+              <span class="arch-pulse" aria-hidden="true"></span>
+              <span class="lbl">Customer Machine · Desktop IDE</span>
+              <strong>Electron + React</strong>
+              <span>Desktop shell with UI ported from the Ledger prototype</span>
+            </div>
+            <div class="arch-node local-bound">
+              <span class="lbl">Editor &amp; Terminal</span>
+              <strong>Monaco &amp; xterm.js</strong>
+              <span>Monaco editor (MVP &rarr; Code-OSS later) with node-pty pseudo-terminal</span>
+            </div>
+            <div class="arch-node local-bound">
+              <span class="lbl">Local Agent Runtime</span>
+              <strong>TypeScript Runtime</strong>
+              <span>Direct local FS, git tree, shell tools, and activity ledger</span>
+            </div>
+          </div>
+
+          <div class="arch-bridge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+
+          <!-- TIER 2: CLOUD CONTROL PLANE -->
+          <div class="arch-col">
+            <div class="arch-node accent">
+              <span class="lbl">Cloud Control Plane</span>
+              <strong>Node API (Fastify / Nest)</strong>
+              <span>Orchestrates quotas, proxying, and session handshakes</span>
+            </div>
+            <div class="arch-node">
+              <span class="lbl">Auth &amp; Identity</span>
+              <strong>Clerk</strong>
+              <span>User auth (v1), swappable to Auth0 / Okta enterprise SSO</span>
+            </div>
+            <div class="arch-node">
+              <span class="lbl">Data &amp; Rate Limits</span>
+              <strong>PostgreSQL + Redis</strong>
+              <span>Seat accounts &amp; usage metering with high-speed Redis quota enforcement</span>
+            </div>
+          </div>
+
+          <div class="arch-bridge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+
+          <!-- TIER 3: INTELLIGENCE & BILLING -->
+          <div class="arch-col">
+            <div class="arch-node accent">
+              <span class="lbl">Intelligence Layer</span>
+              <strong>Model Gateway</strong>
+              <span>Anthropic, OpenAI, Google — API keys stay strictly server-side</span>
+            </div>
+            <div class="arch-node">
+              <span class="lbl">Billing &amp; Subscriptions</span>
+              <strong>Stripe</strong>
+              <span>Seat licenses + metered agent token usage</span>
+            </div>
+            <div class="arch-node">
+              <span class="lbl">Admin Console</span>
+              <strong>Next.js Console</strong>
+              <span>Team workspace management, billing, SSO, and seat allocation</span>
+            </div>
+          </div>
+        </div>
+        <p class="arch-caption"><strong>Language:</strong> TypeScript across desktop, local agent runtime, control plane API, and admin console. <strong>Boundary:</strong> Code stays on the customer machine; cloud handles only identity, quotas, billing, and LLM proxies.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRICING ================= -->
+  <section class="section" id="pricing">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">Pricing</span>
+        <h2>Seats and metered usage that scale with your team.</h2>
+        <p>Billed securely via Stripe. Upgrade when your squad needs deeper model budgets, team seat provisioning, and enterprise SSO.</p>
+      </div>
+      <div class="pricing-grid reveal">
+        <article class="price-tier">
+          <div class="tier-lbl">
+            <span class="lbl">Individual</span>
+          </div>
+          <h3>Plus</h3>
+          <div class="price-amount"><span class="amt">$20</span><span class="per">/ mo</span></div>
+          <p class="price-desc">Desktop-first agentic coding for solo developers who demand full code privacy.</p>
+          <ul>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Electron desktop IDE with Monaco &amp; xterm.js</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Local agent runtime (FS, git, shell tools)</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Pre-task checkpoints with 1-click rollback</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Model Gateway access (Anthropic, OpenAI, Google)</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Clerk identity &amp; Stripe-managed billing</li>
+          </ul>
+          <a class="btn" href="#download">Start Plus</a>
+        </article>
+
+        <article class="price-tier featured">
+          <div class="tier-lbl">
+            <span class="lbl">Most teams</span>
+            <span class="pill live">Recommended</span>
+          </div>
+          <h3>Pro</h3>
+          <div class="price-amount"><span class="amt">$40</span><span class="per">/ seat / mo</span></div>
+          <p class="price-desc">Higher Redis quota thresholds, Controlled Auto-run, and team seat provisioning.</p>
+          <ul>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Everything in Plus</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Controlled Auto-run + Hunk Diff Review</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Next.js Admin Console (seat invites, team quotas)</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Unlimited Model Gateway providers with auto-failover</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Metered usage telemetry via Node API + PostgreSQL</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Server-side API keys (keys never touch client)</li>
+          </ul>
+          <a class="btn primary" href="#download">Start Pro</a>
+        </article>
+
+        <article class="price-tier">
+          <div class="tier-lbl">
+            <span class="lbl">Enterprise</span>
+          </div>
+          <h3>Max</h3>
+          <div class="price-amount"><span class="amt">$80</span><span class="per">/ seat / mo</span></div>
+          <p class="price-desc">For engineering organizations requiring custom SSO, compliance audit trails, and dedicated capacity.</p>
+          <div class="privacy-callout">
+            <strong>100% Zero Code Storage</strong> — Full SOC2-compliant guarantee. Code stays on developer machines; cloud control plane only validates Clerk tokens &amp; Redis rate limits.
+          </div>
+          <ul>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Everything in Pro</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Clerk SSO / SAML (swappable to Auth0 / Okta)</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Custom Next.js admin console with organization audit logs</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Priority Model Gateway capacity &amp; BYOK support</li>
+            <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Custom Stripe invoicing &amp; volume seat discounts</li>
+          </ul>
+          <a class="btn" href="#download">Start Max</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SECURITY & FAQ ================= -->
+  <section class="section" id="faq" style="padding-top:40px">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="lbl">Security &amp; Architecture</span>
+        <h2>Answers for engineers who care about their code.</h2>
+        <p>No mystery hand-waving. Here is exactly how Ledger handles code privacy, model routing, checkpoints, and permissions.</p>
+      </div>
+
+      <div class="faq-grid reveal" id="faqGrid">
+        <div class="faq-card open">
+          <div class="faq-q">
+            <span>Does my codebase get uploaded to the cloud?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            <strong>No.</strong> Ledger is desktop-first: all source files, git commits, and terminal executions remain 100% on your local machine. The cloud control plane strictly isolates identity (Clerk), usage quotas (Redis), and billing (Stripe). Only the minimal semantic snippet chunks needed for inference pass through the model gateway.
+          </div>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q">
+            <span>What is the locked technology stack behind Ledger?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            TypeScript is used everywhere. The customer client is built with <strong>Electron</strong>, <strong>React</strong>, <strong>Monaco</strong> editor (MVP &rarr; Code-OSS roadmap), and <strong>xterm.js + node-pty</strong> for native terminal sessions. The cloud control plane runs a <strong>Node API (Fastify / Nest)</strong>, <strong>PostgreSQL</strong>, <strong>Redis</strong> quotas, <strong>Clerk</strong> authentication, and a <strong>Next.js</strong> admin console.
+          </div>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q">
+            <span>How does the 1-Click Checkpoint Rollback work?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Before an agent task begins executing, Ledger automatically creates a lightweight local checkpoint of all files slated for modification. If the agent makes an erroneous edit or breaks tests, clicking <em>Roll back this task</em> instantly restores your workspace to its exact prior state.
+          </div>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q">
+            <span>Where are AI model API keys stored?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Provider keys (Anthropic, OpenAI, Google) stay strictly server-side inside the secure Model Gateway. The desktop client authenticates using a signed Clerk session token, so raw API keys are never exposed on client machines or bundled in app code.
+          </div>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q">
+            <span>How does Controlled Auto-run prevent dangerous bash commands?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Controlled Auto-run permits low-risk operations (such as reading source files, running formatting, or running test runners on an approved allowlist) without interruption. However, privileged actions (such as deleting files, running package install scripts, or invoking external network APIs) strictly halt execution for engineer approval.
+          </div>
+        </div>
+
+        <div class="faq-card">
+          <div class="faq-q">
+            <span>Can Clerk auth be swapped for enterprise Okta or Auth0?</span>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Yes. Clerk is our turnkey identity solution for v1. The Node API control plane is engineered with a modular auth interface, allowing seamless drop-in integration with Auth0, Okta, or custom SAML providers for enterprise deployments.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOWNLOAD & WEB DEMO ================= -->
+  <section class="section" id="download">
+    <div class="wrap">
+      <div class="final reveal">
+        <span class="lbl">Get Ledger</span>
+        <h2>Open the ledger. Keep the agent honest.</h2>
+        <p>Download the native Electron desktop client, authenticate with Clerk, and run an auditable agentic workspace where code never leaves your box.</p>
+        
+        <div class="download-grid">
+          <div class="download-card">
+            <div class="os">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.66-.8 1.11-1.92.99-3.04-.96.04-2.12.64-2.8 1.44-.61.71-1.14 1.85-1 2.95 1.07.08 2.16-.55 2.81-1.35z"/></svg>
+              macOS
+            </div>
+            <div class="specs">Apple Silicon (.dmg) · Intel (.dmg)</div>
+            <a class="btn primary sm" href="#" onclick="alert('Desktop build release package initiated.')" style="margin-top:auto">Download .dmg</a>
+          </div>
+
+          <div class="download-card">
+            <div class="os">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+              Windows
+            </div>
+            <div class="specs">x64 Installer (.exe) · ARM64</div>
+            <a class="btn primary sm" href="#" onclick="alert('Desktop build release package initiated.')" style="margin-top:auto">Download .exe</a>
+          </div>
+
+          <div class="download-card">
+            <div class="os">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+              Linux
+            </div>
+            <div class="specs">Debian / Ubuntu (.deb) · AppImage</div>
+            <a class="btn primary sm" href="#" onclick="alert('Desktop build release package initiated.')" style="margin-top:auto">Download .deb</a>
+          </div>
+        </div>
+
+        <!-- ZERO INSTALL CALLOUT -->
+        <div class="web-demo-card">
+          <div>
+            <div style="font-weight:650;font-size:15px;color:var(--text)">Don't want to install anything right now?</div>
+            <div style="font-size:13px;color:var(--text-2);margin-top:4px">You can launch the complete, interactive IDE prototype directly in your browser with zero setup.</div>
+          </div>
+          <a class="btn accent" href="Ledger IDE.html" target="_blank" style="white-space:nowrap">
+            Launch Web Prototype ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <div>© 2026 Ledger · Desktop-First Agentic Coding IDE · TypeScript Everywhere</div>
+    <nav aria-label="Footer">
+      <a href="#product">Product</a>
+      <a href="#compare">Why Ledger</a>
+      <a href="#features">Features</a>
+      <a href="#stack">Stack</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="Ledger IDE.html" target="_blank" style="color:var(--accent);font-weight:500">Live Web Demo ↗</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Sticky nav border
+  const nav = document.getElementById('siteNav');
+  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Intersection observer for reveal
+  const els = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(el => io.observe(el));
+  } else {
+    els.forEach(el => el.classList.add('in'));
+  }
+
+  // ================= HERO IDE VIEW SWITCHING =================
+  const heroNavRail = document.getElementById('heroNavRail');
+  if (heroNavRail) {
+    const heroNavBtns = heroNavRail.querySelectorAll('.navbtn');
+    const heroViews = {
+      code: document.getElementById('heroView-code'),
+      agent: document.getElementById('heroView-agent'),
+      diff: document.getElementById('heroView-diff'),
+      context: document.getElementById('heroView-context')
+    };
+
+    function switchHeroView(target) {
+      heroNavBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.heroView === target));
+      Object.keys(heroViews).forEach(k => {
+        if (heroViews[k]) heroViews[k].classList.toggle('active', k === target);
+      });
+    }
+
+    heroNavBtns.forEach(btn => {
+      btn.addEventListener('click', () => switchHeroView(btn.dataset.heroView));
+    });
+
+    // Teaser button in hero: "Ask in Agent Command Center"
+    const heroBtnAsk = document.getElementById('heroBtnAsk');
+    if (heroBtnAsk) {
+      heroBtnAsk.addEventListener('click', () => {
+        switchHeroView('agent');
+      });
+    }
+  }
+
+  // Hero Approval interactive buttons
+  const heroApproveBtn = document.getElementById('heroApproveBtn');
+  const heroApprovalCard = document.getElementById('heroApprovalCard');
+  const heroRunStatus = document.getElementById('heroRunStatus');
+  if (heroApproveBtn && heroApprovalCard && heroRunStatus) {
+    heroApproveBtn.addEventListener('click', () => {
+      heroApprovalCard.style.display = 'none';
+      heroRunStatus.textContent = 'running';
+      heroRunStatus.className = 'astatus running';
+      setTimeout(() => {
+        heroRunStatus.textContent = 'done (4 passed)';
+        heroRunStatus.className = 'astatus done';
+      }, 900);
+    });
+  }
+
+  // ================= FEATURE SHOWCASE =================
+  const showcase = document.getElementById('featureShowcase');
+  if (showcase) {
+    const tabs = [...showcase.querySelectorAll('.showcase-tab')];
+    const panels = [...showcase.querySelectorAll('.showcase-panel')];
+
+    function activateShowcase(id) {
+      tabs.forEach(t => {
+        const on = t.dataset.panel === id;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === id));
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => {
+      clearInterval(timer);
+      activateShowcase(t.dataset.panel);
+    }));
+
+    let curIdx = 0;
+    const order = ['agent', 'diff', 'context', 'access', 'models'];
+    let timer = setInterval(() => {
+      curIdx = (curIdx + 1) % order.length;
+      activateShowcase(order[curIdx]);
+    }, 6000);
+
+    showcase.addEventListener('pointerenter', () => clearInterval(timer));
+    showcase.addEventListener('pointerleave', () => {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        curIdx = (curIdx + 1) % order.length;
+        activateShowcase(order[curIdx]);
+      }, 6000);
+    });
+
+    // Showcase interactive Approve button
+    const scApprove = document.getElementById('showcaseApproveBtn');
+    const scCard = document.getElementById('showcaseApprovalCard');
+    const scRun = document.getElementById('showcaseRunStatus');
+    if (scApprove && scCard && scRun) {
+      scApprove.addEventListener('click', () => {
+        scCard.innerHTML = '<div style="color:var(--success);font-weight:600;font-size:12.5px">✓ Action approved by engineer</div>';
+        scRun.textContent = 'done (4 passed)';
+        scRun.className = 'astatus done';
+      });
+    }
+
+    // Showcase diff accept/reject
+    const btnDiffAccept = document.getElementById('btnDiffAccept');
+    const btnDiffReject = document.getElementById('btnDiffReject');
+    const diffCounter = document.getElementById('diffCounter');
+    const hunkPill = document.getElementById('hunkPill');
+    if (btnDiffAccept && btnDiffReject && diffCounter && hunkPill) {
+      btnDiffAccept.addEventListener('click', () => {
+        diffCounter.textContent = '1 accepted';
+        diffCounter.style.color = 'var(--success)';
+        hunkPill.textContent = 'accepted';
+        hunkPill.className = 'pill ok';
+      });
+      btnDiffReject.addEventListener('click', () => {
+        diffCounter.textContent = '1 rejected';
+        diffCounter.style.color = 'var(--danger)';
+        hunkPill.textContent = 'rejected';
+        hunkPill.className = 'pill warn';
+      });
+    }
+
+    // Showcase autonomy mode radio selector
+    const modeCards = showcase.querySelectorAll('.mode-card');
+    modeCards.forEach(card => {
+      card.addEventListener('click', () => {
+        modeCards.forEach(c => c.classList.remove('sel'));
+        card.classList.add('sel');
+      });
+    });
+
+    // Showcase failover simulator
+    const btnFailover = document.getElementById('btnSimulateFailover');
+    const cardAnthropic = document.getElementById('cardAnthropic');
+    const pillAnthropic = document.getElementById('pillAnthropic');
+    const latAnthropic = document.getElementById('latAnthropic');
+    const failoverBanner = document.getElementById('failoverBanner');
+    let isFailed = false;
+    if (btnFailover && cardAnthropic && pillAnthropic && failoverBanner) {
+      btnFailover.addEventListener('click', () => {
+        isFailed = !isFailed;
+        if (isFailed) {
+          cardAnthropic.classList.add('failover');
+          pillAnthropic.className = 'pill warn';
+          pillAnthropic.innerHTML = '<span class="dot"></span>503 Error';
+          latAnthropic.textContent = 'TIMEOUT';
+          latAnthropic.style.color = 'var(--danger)';
+          failoverBanner.style.display = 'block';
+          btnFailover.textContent = 'Restore Gateway';
+        } else {
+          cardAnthropic.classList.remove('failover');
+          pillAnthropic.className = 'pill ok';
+          pillAnthropic.innerHTML = '<span class="dot"></span>Online';
+          latAnthropic.textContent = '640ms';
+          latAnthropic.style.color = 'var(--text-2)';
+          failoverBanner.style.display = 'none';
+          btnFailover.textContent = 'Simulate Failover';
+        }
+      });
+    }
+  }
+
+  // ================= FAQ ACCORDION =================
+  const faqCards = document.querySelectorAll('.faq-card');
+  faqCards.forEach(c => {
+    c.addEventListener('click', () => {
+      const wasOpen = c.classList.contains('open');
+      faqCards.forEach(item => item.classList.remove('open'));
+      if (!wasOpen) c.classList.add('open');
+    });
+  });
+})();
+</script>
+</body>
+</html>

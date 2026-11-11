@@ -1,0 +1,1668 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Ledger IDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================
+   LEDGER — an agentic coding IDE
+   Layout: fixed title bar + left icon rail + routed workspace views.
+   Design language: Structural Mono — near-monochrome surfaces,
+   hairline rules carry hierarchy, one signal-blue accent reserved
+   for state/action, agent activity reads as an auditable ledger
+   rather than a chat transcript.
+   =========================================================== */
+
+:root{
+  /* ---- dark (default) ---- */
+  --bg-canvas:#0a0a0b;
+  --bg-surface:#131315;
+  --bg-surface-2:#1a1a1d;
+  --bg-inset:#08080a;
+  --bg-hover:#202024;
+  --border-subtle:#1e1e22;
+  --border:#28282c;
+  --border-strong:#44444a;
+  --text:#f2f2f3;
+  --text-2:#a3a3aa;
+  --text-3:#737379;
+  --text-disabled:#4c4c52;
+  --accent:#4c7fe6;
+  --accent-strong:#3a68cc;
+  --accent-wash:#4c7fe61a;
+  --on-accent:#f5f7fc;
+  --success:#49a872;
+  --success-wash:#49a87220;
+  --warning:#c98a2e;
+  --warning-wash:#c98a2e20;
+  --danger:#dd5b50;
+  --danger-wash:#dd5b5020;
+  --info:#5a93d6;
+  --info-wash:#5a93d620;
+  --font-ui:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --shadow-pop:0 12px 32px -8px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg-canvas:#fafafb;
+    --bg-surface:#f3f3f4;
+    --bg-surface-2:#e9e9eb;
+    --bg-inset:#ffffff;
+    --bg-hover:#e3e3e6;
+    --border-subtle:#e6e6e8;
+    --border:#d8d8db;
+    --border-strong:#b7b7bc;
+    --text:#17171a;
+    --text-2:#5c5c63;
+    --text-3:#86868d;
+    --text-disabled:#b7b7bc;
+    --accent:#3760c9;
+    --accent-strong:#2b4da3;
+    --accent-wash:#3760c914;
+    --on-accent:#f7f8fc;
+    --success:#2f8a57;
+    --success-wash:#2f8a5718;
+    --warning:#a3701f;
+    --warning-wash:#a3701f18;
+    --danger:#c0453b;
+    --danger-wash:#c0453b18;
+    --info:#3f74b0;
+    --info-wash:#3f74b018;
+    --shadow-pop:0 12px 32px -8px rgba(20,20,30,.16),0 2px 8px -2px rgba(20,20,30,.08);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg-canvas:#fafafb; --bg-surface:#f3f3f4; --bg-surface-2:#e9e9eb; --bg-inset:#ffffff; --bg-hover:#e3e3e6;
+  --border-subtle:#e6e6e8; --border:#d8d8db; --border-strong:#b7b7bc;
+  --text:#17171a; --text-2:#5c5c63; --text-3:#86868d; --text-disabled:#b7b7bc;
+  --accent:#3760c9; --accent-strong:#2b4da3; --accent-wash:#3760c914; --on-accent:#f7f8fc;
+  --success:#2f8a57; --success-wash:#2f8a5718; --warning:#a3701f; --warning-wash:#a3701f18;
+  --danger:#c0453b; --danger-wash:#c0453b18; --info:#3f74b0; --info-wash:#3f74b018;
+  --shadow-pop:0 12px 32px -8px rgba(20,20,30,.16),0 2px 8px -2px rgba(20,20,30,.08);
+  color-scheme:light;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg-canvas); color:var(--text);
+  font-family:var(--font-ui); font-size:13px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  padding-left:max(0px, env(safe-area-inset-left,0px));
+  padding-right:max(0px, env(safe-area-inset-right,0px));
+  overflow:hidden;
+}
+::selection{ background:var(--accent-wash); color:var(--text); }
+button,select,input,textarea{ font-family:inherit; font-size:inherit; color:inherit; }
+button{ cursor:pointer; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+@media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+
+.mono{ font-family:var(--font-mono); }
+.tnum{ font-variant-numeric: tabular-nums; }
+
+/* ---------- app shell ---------- */
+#app{
+  display:flex; flex-direction:column; height:100%; min-height:0;
+}
+
+/* title bar */
+.titlebar{
+  height:36px; min-height:36px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 14px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle);
+  padding-top:env(safe-area-inset-top,0px);
+}
+.tb-left, .tb-right{ display:flex; align-items:center; gap:14px; min-width:0; }
+.tb-dots{ display:flex; gap:5px; flex:none; }
+.tb-dots span{ width:9px; height:9px; border-radius:50%; background:var(--border-strong); display:block; }
+.tb-path{ color:var(--text-3); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tb-path b{ color:var(--text-2); font-weight:500; }
+.pill{
+  display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:3px;
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.3px; font-weight:500;
+  border:1px solid var(--border); background:var(--bg-surface-2); color:var(--text-2);
+  white-space:nowrap;
+}
+.pill.live{ color:var(--accent); border-color:var(--accent-wash); background:var(--accent-wash); }
+.pill.ok{ color:var(--success); border-color:var(--success-wash); background:var(--success-wash); }
+.pill.err{ color:var(--danger); border-color:var(--danger-wash); background:var(--danger-wash); }
+.pill.warn{ color:var(--warning); border-color:var(--warning-wash); background:var(--warning-wash); }
+.dot{ width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
+.dot.blink{ animation:blink 1.6s ease-in-out infinite; }
+@keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.iconbtn{
+  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  border-radius:4px; border:1px solid transparent; background:transparent; color:var(--text-2);
+}
+.iconbtn:hover{ background:var(--bg-hover); color:var(--text); }
+.iconbtn svg{ width:15px; height:15px; }
+
+.kbd{
+  font-family:var(--font-mono); font-size:10.5px; color:var(--text-3);
+  border:1px solid var(--border); border-radius:3px; padding:2px 6px; background:var(--bg-inset);
+}
+
+/* main row: nav rail + view */
+.shell{ flex:1; min-height:0; display:flex; }
+
+.navrail{
+  width:58px; flex:none; background:var(--bg-surface); border-right:1px solid var(--border-subtle);
+  display:flex; flex-direction:column; align-items:center; padding:10px 0; gap:2px;
+}
+.navbtn{
+  width:42px; height:42px; border-radius:6px; background:transparent; border:1px solid transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  color:var(--text-3);
+}
+.navbtn svg{ width:17px; height:17px; }
+.navbtn span{ font-size:8.5px; font-weight:500; letter-spacing:.2px; }
+.navbtn:hover{ color:var(--text-2); background:var(--bg-hover); }
+.navbtn.active{ color:var(--accent); background:var(--accent-wash); }
+.navrail .spacer{ flex:1; }
+.navbtn.notify{ position:relative; }
+.navbtn.notify::after{ content:''; position:absolute; top:6px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--danger); border:1.5px solid var(--bg-surface); }
+
+.view{ flex:1; min-width:0; min-height:0; display:none; }
+.view.active{ display:flex; }
+
+/* scrollable column helper */
+.scroll-y{ overflow-y:auto; overflow-x:hidden; }
+.scroll-y::-webkit-scrollbar{ width:9px; height:9px; }
+.scroll-y::-webkit-scrollbar-thumb{ background:var(--border-strong); border-radius:5px; border:2px solid transparent; background-clip:padding-box; }
+.scroll-y::-webkit-scrollbar-track{ background:transparent; }
+
+/* section label */
+.lbl{ font-family:var(--font-mono); font-size:10px; letter-spacing:.6px; color:var(--text-3); font-weight:500; text-transform:uppercase; }
+
+/* ============ WORKSPACE VIEW ============ */
+#view-workspace{ flex-direction:row; }
+.explorer{
+  width:232px; flex:none; background:var(--bg-surface); border-right:1px solid var(--border-subtle);
+  display:flex; flex-direction:column; padding-top:12px; min-height:0;
+}
+.explorer-head{ padding:0 14px 8px; display:flex; align-items:center; justify-content:space-between; }
+.filetree{ flex:1; overflow-y:auto; padding-bottom:12px; }
+.frow{
+  display:flex; align-items:center; gap:6px; padding:4px 14px; cursor:pointer; color:var(--text-2);
+  border-left:2px solid transparent; white-space:nowrap;
+}
+.frow:hover{ background:var(--bg-hover); }
+.frow.active{ background:var(--bg-surface-2); color:var(--text); border-left-color:var(--accent); }
+.frow .chev{ width:10px; color:var(--text-3); font-size:9px; flex:none; }
+.frow .fname{ font-size:12.5px; overflow:hidden; text-overflow:ellipsis; }
+.frow .tag{ margin-left:auto; font-family:var(--font-mono); font-size:9.5px; font-weight:600; flex:none; }
+.frow .tag.m{ color:var(--warning); }
+.frow .tag.n{ color:var(--success); }
+
+.editorcol{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.tabs{ display:flex; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); flex:none; overflow-x:auto; }
+.tab{
+  display:flex; align-items:center; gap:8px; padding:9px 14px; font-size:12px; color:var(--text-3);
+  border-right:1px solid var(--border-subtle); cursor:pointer; white-space:nowrap; flex:none;
+}
+.tab:hover{ color:var(--text-2); }
+.tab.active{ background:var(--bg-canvas); color:var(--text); font-weight:500; }
+.tab .x{ opacity:0; font-size:13px; line-height:1; }
+.tab:hover .x{ opacity:.6; }
+.tab .x:hover{ opacity:1; }
+
+.breadcrumb{ padding:6px 18px; font-family:var(--font-mono); font-size:11px; color:var(--text-3); border-bottom:1px solid var(--border-subtle); flex:none; }
+.breadcrumb b{ color:var(--text-2); font-weight:500; }
+
+.codearea{ flex:1; min-height:0; overflow:auto; background:var(--bg-canvas); padding:14px 0; }
+.codeline{ display:flex; padding:0 18px; }
+.codeline:hover{ background:var(--bg-surface); }
+.ln{ width:34px; flex:none; text-align:right; padding-right:16px; color:var(--text-disabled); font-family:var(--font-mono); font-size:12.5px; user-select:none; }
+.code{ font-family:var(--font-mono); font-size:12.5px; white-space:pre; color:var(--text); }
+.tok-kw{ color:var(--accent); } .tok-str{ color:var(--success); } .tok-com{ color:var(--text-3); font-style:italic; }
+.tok-fn{ color:#c9a768; } .tok-num{ color:#c98a2e; }
+:root[data-theme="light"] .tok-fn, @media (prefers-color-scheme:light){ .tok-fn{ color:#9a7524; } }
+
+.panelbar{ display:flex; align-items:center; gap:18px; padding:7px 18px; background:var(--bg-surface); border-top:1px solid var(--border-subtle); flex:none; }
+.panelbar .seg{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.4px; color:var(--text-3); padding-bottom:6px; border-bottom:2px solid transparent; cursor:pointer; }
+.panelbar .seg.active{ color:var(--text); border-color:var(--accent); }
+
+.terminal{ height:190px; flex:none; background:var(--bg-surface); overflow-y:auto; padding:10px 18px 14px; }
+.termline{ font-family:var(--font-mono); font-size:11.5px; color:var(--text-2); padding:1.5px 0; }
+.termline.ok{ color:var(--success); }
+.termline.cmd{ color:var(--text); }
+.termline.cmd::before{ content:'$ '; color:var(--text-3); }
+
+.statusbar{
+  height:24px; flex:none; background:var(--accent); display:flex; align-items:center; justify-content:space-between;
+  padding:0 14px; font-family:var(--font-mono); font-size:10.5px; color:var(--on-accent); font-weight:500;
+}
+.statusbar .grp{ display:flex; gap:16px; align-items:center; }
+
+.agentteaser{
+  width:280px; flex:none; background:var(--bg-surface); border-left:1px solid var(--border-subtle);
+  display:flex; flex-direction:column; padding:14px;
+}
+.teaser-ask{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+.teaser-ask textarea{
+  resize:none; background:var(--bg-inset); border:1px solid var(--border); border-radius:5px; padding:9px 10px;
+  color:var(--text); height:64px; font-size:12px;
+}
+.teaser-ask textarea::placeholder{ color:var(--text-3); }
+
+/* ============ shared: button / input / card ============ */
+.btn{
+  display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:5px; font-size:12px; font-weight:500;
+  border:1px solid var(--border); background:var(--bg-surface-2); color:var(--text-2);
+}
+.btn:hover{ color:var(--text); border-color:var(--border-strong); }
+.btn.primary{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.btn.primary:hover{ background:var(--accent-strong); border-color:var(--accent-strong); }
+.btn.danger{ color:var(--danger); border-color:var(--danger-wash); background:var(--danger-wash); }
+.btn.danger:hover{ border-color:var(--danger); }
+.btn:disabled{ opacity:.45; cursor:default; }
+.btn.sm{ padding:4px 9px; font-size:11px; }
+.btn svg{ width:13px; height:13px; }
+
+.card{ background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:7px; }
+.chip{
+  display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:4px;
+  background:var(--bg-inset); border:1px solid var(--border); font-family:var(--font-mono); font-size:10.5px; color:var(--text-2);
+}
+
+/* ============ AGENT VIEW ============ */
+#view-agent{ flex-direction:row; }
+.agent-left{ width:320px; flex:none; background:var(--bg-surface); border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; padding:18px 18px 16px; gap:18px; overflow-y:auto; }
+.agent-center{ flex:1; min-width:0; display:flex; flex-direction:column; min-height:0; }
+.agent-right{ width:270px; flex:none; background:var(--bg-surface); border-left:1px solid var(--border-subtle); padding:18px; display:flex; flex-direction:column; gap:18px; overflow-y:auto; }
+
+.taskbox{ background:var(--bg-inset); border:1px solid var(--border-subtle); border-radius:6px; padding:12px; font-size:12.5px; color:var(--text); line-height:1.55; margin-top:8px; }
+.plan{ display:flex; flex-direction:column; gap:9px; margin-top:8px; }
+.plan-row{ display:flex; align-items:flex-start; gap:9px; font-size:12.5px; }
+.plan-marker{ width:15px; flex:none; font-family:var(--font-mono); font-size:12px; text-align:center; margin-top:1px; }
+.plan-marker.done{ color:var(--success); } .plan-marker.active{ color:var(--accent); } .plan-marker.pending{ color:var(--text-disabled); }
+.plan-row.pending{ color:var(--text-3); }
+.plan-row.active{ color:var(--text); font-weight:500; }
+.plan-row.done{ color:var(--text-2); }
+
+.chiprow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+
+.agent-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 22px; border-bottom:1px solid var(--border-subtle); flex:none; }
+.stream{ flex:1; overflow-y:auto; padding:4px 22px 22px; }
+.activity{ display:flex; gap:12px; padding:11px 0; border-bottom:1px solid var(--border-subtle); align-items:flex-start; }
+.activity:last-child{ border-bottom:none; }
+.atag{
+  flex:none; font-family:var(--font-mono); font-size:9.5px; font-weight:600; letter-spacing:.4px; padding:3px 7px; border-radius:3px;
+  background:var(--bg-surface-2); color:var(--text-3); border:1px solid var(--border); margin-top:1px; white-space:nowrap;
+}
+.atag.READ{ color:var(--info); } .atag.EDIT{ color:var(--accent); } .atag.RUN{ color:var(--warning); }
+.atag.APPROVAL{ color:var(--text); background:var(--bg-hover); } .atag.PLAN{ color:var(--text-3); }
+.abody{ flex:1; min-width:0; }
+.atitle{ font-size:12.5px; color:var(--text); font-weight:500; }
+.adetail{ font-family:var(--font-mono); font-size:11px; color:var(--text-2); margin-top:3px; }
+.astatus{ flex:none; font-family:var(--font-mono); font-size:10.5px; font-weight:500; margin-top:2px; }
+.astatus.done{ color:var(--success); } .astatus.failed{ color:var(--danger); } .astatus.running{ color:var(--accent); } .astatus.approved{ color:var(--info); }
+
+.approvalcard{ margin:10px 0; padding:12px 14px; background:var(--warning-wash); border:1px solid var(--warning); border-radius:6px; }
+.approvalcard .t{ font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.approvalcard .d{ font-size:11.5px; color:var(--text-2); font-family:var(--font-mono); margin-bottom:10px; }
+.approvalcard .btns{ display:flex; gap:8px; }
+
+.metric{ display:flex; flex-direction:column; gap:3px; }
+.metric .v{ font-family:var(--font-mono); font-size:16px; font-weight:600; color:var(--text); }
+.metric .l{ font-family:var(--font-mono); font-size:10px; color:var(--text-3); letter-spacing:.3px; }
+.barwrap{ height:5px; background:var(--bg-inset); border-radius:3px; overflow:hidden; margin-top:4px; }
+.barwrap > div{ height:100%; background:var(--accent); border-radius:3px; transition:width .5s ease; }
+
+.filerow{ display:flex; justify-content:space-between; font-size:11.5px; padding:4px 0; }
+.filerow .f{ font-family:var(--font-mono); color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.filerow .d{ font-family:var(--font-mono); color:var(--success); flex:none; margin-left:8px; }
+
+.controls{ display:flex; gap:8px; margin-top:4px; }
+
+/* ============ DIFF VIEW ============ */
+#view-diff{ flex-direction:row; }
+.diff-left{ width:260px; flex:none; background:var(--bg-surface); border-right:1px solid var(--border-subtle); padding:16px 0; overflow-y:auto; }
+.diff-filehead{ padding:0 16px 10px; }
+.diffrow{ display:flex; align-items:center; gap:8px; padding:7px 16px; cursor:pointer; border-left:2px solid transparent; }
+.diffrow:hover{ background:var(--bg-hover); }
+.diffrow.active{ background:var(--bg-surface-2); border-left-color:var(--accent); }
+.diffrow .fn{ font-family:var(--font-mono); font-size:11.5px; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.diffrow .stat{ font-family:var(--font-mono); font-size:10px; flex:none; }
+.diffrow .add{ color:var(--success); } .diffrow .del{ color:var(--danger); margin-left:4px; }
+.diff-center{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.diff-toolbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border-subtle); flex:none; }
+.diff-body{ flex:1; overflow-y:auto; padding:14px 0; }
+.hunk{ margin:0 20px 18px; border:1px solid var(--border-subtle); border-radius:6px; overflow:hidden; }
+.hunk-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); }
+.hunk-head .loc{ font-family:var(--font-mono); font-size:11px; color:var(--text-3); }
+.hunk-lines{ background:var(--bg-canvas); }
+.dline{ display:flex; font-family:var(--font-mono); font-size:12px; padding:1px 0; }
+.dline .m{ width:18px; flex:none; text-align:center; color:var(--text-3); }
+.dline .t{ white-space:pre; padding-right:14px; }
+.dline.add{ background:var(--success-wash); } .dline.add .m{ color:var(--success); }
+.dline.del{ background:var(--danger-wash); } .dline.del .m{ color:var(--danger); }
+.dline.ctx .t{ color:var(--text-2); }
+.hunk.rejected .hunk-lines{ opacity:.35; }
+.diff-right{ width:260px; flex:none; background:var(--bg-surface); border-left:1px solid var(--border-subtle); padding:18px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; }
+.toggle{ display:inline-flex; align-items:center; width:30px; height:17px; border-radius:9px; background:var(--border); position:relative; border:none; flex:none; }
+.toggle.on{ background:var(--accent); }
+.toggle .knob{ position:absolute; width:13px; height:13px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s ease; box-shadow:0 1px 2px rgba(0,0,0,.3); }
+.toggle.on .knob{ left:15px; }
+.empty-state{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--text-3); text-align:center; padding:40px; }
+.empty-state .ic{ width:40px; height:40px; opacity:.5; }
+.empty-state .t{ font-size:13px; color:var(--text-2); font-weight:500; }
+.empty-state .d{ font-size:12px; max-width:280px; }
+
+/* ============ CONTEXT VIEW ============ */
+#view-context{ flex-direction:column; padding:22px 28px; gap:20px; overflow-y:auto; }
+.ctx-grid{ display:grid; grid-template-columns:1.3fr 1fr; gap:20px; align-items:start; }
+.ctx-item{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border-subtle); }
+.ctx-item:last-child{ border-bottom:none; }
+.ctx-item .relbar{ width:46px; height:4px; background:var(--bg-inset); border-radius:2px; overflow:hidden; flex:none; }
+.ctx-item .relbar>div{ height:100%; background:var(--accent); }
+.ctx-item .meta{ flex:1; min-width:0; }
+.ctx-item .fn{ font-family:var(--font-mono); font-size:12px; color:var(--text); }
+.ctx-item .why{ font-size:11px; color:var(--text-3); margin-top:2px; }
+.ctx-item .pct{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-3); flex:none; width:32px; text-align:right; }
+
+/* ============ MODELS VIEW ============ */
+#view-models{ flex-direction:column; padding:22px 28px; gap:20px; overflow-y:auto; }
+.provider-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.provider-card{ padding:16px; display:flex; flex-direction:column; gap:10px; }
+.provider-card .top{ display:flex; align-items:center; justify-content:space-between; }
+.provider-card .name{ font-weight:600; font-size:13.5px; }
+.kv{ display:flex; justify-content:space-between; font-size:11.5px; padding:5px 0; border-top:1px solid var(--border-subtle); }
+.kv .k{ color:var(--text-3); } .kv .v{ color:var(--text-2); font-family:var(--font-mono); }
+
+table.tbl{ width:100%; border-collapse:collapse; }
+table.tbl th{ text-align:left; font-family:var(--font-mono); font-size:10px; letter-spacing:.4px; color:var(--text-3); font-weight:500; padding:8px 14px; border-bottom:1px solid var(--border); text-transform:uppercase; }
+table.tbl td{ padding:10px 14px; border-bottom:1px solid var(--border-subtle); font-size:12.5px; }
+table.tbl tr:last-child td{ border-bottom:none; }
+select.msel{ background:var(--bg-inset); border:1px solid var(--border); border-radius:5px; padding:6px 10px; color:var(--text); font-size:12px; width:100%; }
+
+.banner{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:6px; font-size:12.5px; }
+.banner.err{ background:var(--danger-wash); border:1px solid var(--danger); color:var(--text); }
+.banner.info{ background:var(--info-wash); border:1px solid var(--info); color:var(--text); }
+.banner .act{ margin-left:auto; flex:none; }
+
+/* ============ PERMISSIONS VIEW ============ */
+#view-permissions{ flex-direction:column; padding:22px 28px; gap:22px; overflow-y:auto; }
+.mode-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.mode-card{ padding:16px; cursor:pointer; border:1.5px solid var(--border-subtle); display:flex; flex-direction:column; gap:8px; }
+.mode-card.sel{ border-color:var(--accent); background:var(--accent-wash); }
+.mode-card .radio{ width:15px; height:15px; border-radius:50%; border:1.5px solid var(--border-strong); position:relative; flex:none; }
+.mode-card.sel .radio{ border-color:var(--accent); }
+.mode-card.sel .radio::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--accent); }
+.mode-card .t{ font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; }
+.mode-card .d{ font-size:11.5px; color:var(--text-2); line-height:1.5; }
+.permlist{ display:flex; flex-direction:column; }
+.permrow{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border-subtle); }
+.permrow:last-child{ border-bottom:none; }
+.permrow .t{ flex:1; font-size:12.5px; } .permrow .s{ font-size:11px; color:var(--text-3); }
+
+/* ============ SETTINGS VIEW ============ */
+#view-settings{ flex-direction:row; }
+.settings-nav{ width:180px; flex:none; background:var(--bg-surface); border-right:1px solid var(--border-subtle); padding:16px 10px; display:flex; flex-direction:column; gap:2px; }
+.snav-item{ padding:8px 12px; border-radius:5px; font-size:12.5px; color:var(--text-2); }
+.snav-item:hover{ background:var(--bg-hover); }
+.snav-item.active{ background:var(--bg-surface-2); color:var(--text); font-weight:500; }
+.settings-body{ flex:1; overflow-y:auto; padding:26px 34px; max-width:640px; }
+.srow{ display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--border-subtle); gap:20px; }
+.srow .label{ font-size:12.5px; color:var(--text); } .srow .sub{ font-size:11px; color:var(--text-3); margin-top:2px; }
+.seg3{ display:flex; border:1px solid var(--border); border-radius:5px; overflow:hidden; }
+.seg3 button{ padding:5px 12px; background:var(--bg-inset); border:none; border-right:1px solid var(--border); font-size:11.5px; color:var(--text-2); }
+.seg3 button:last-child{ border-right:none; }
+.seg3 button.active{ background:var(--accent); color:var(--on-accent); }
+
+/* ============ command palette ============ */
+.palette-overlay{ position:fixed; inset:0; background:rgba(5,5,8,.5); display:flex; align-items:flex-start; justify-content:center; padding-top:14vh; z-index:200; backdrop-filter:blur(2px); }
+.palette{ width:560px; max-width:92vw; background:var(--bg-surface-2); border:1px solid var(--border); border-radius:9px; box-shadow:var(--shadow-pop); overflow:hidden; }
+.palette input{ width:100%; border:none; background:transparent; padding:15px 18px; font-size:14px; color:var(--text); border-bottom:1px solid var(--border-subtle); }
+.palette input::placeholder{ color:var(--text-3); }
+.palette-list{ max-height:320px; overflow-y:auto; padding:6px; }
+.pitem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:6px; font-size:12.5px; color:var(--text-2); }
+.pitem .k{ margin-left:auto; font-family:var(--font-mono); font-size:10px; color:var(--text-3); }
+.pitem.sel{ background:var(--accent-wash); color:var(--text); }
+.pitem svg{ width:14px; height:14px; flex:none; color:var(--text-3); }
+
+/* ============ onboarding ============ */
+.onb-overlay{ position:fixed; inset:0; background:var(--bg-canvas); z-index:300; display:flex; align-items:center; justify-content:center; }
+.onb-card{ width:460px; max-width:90vw; display:flex; flex-direction:column; gap:18px; }
+.onb-steps{ display:flex; gap:6px; }
+.onb-steps .s{ flex:1; height:3px; border-radius:2px; background:var(--border); }
+.onb-steps .s.done{ background:var(--accent); }
+.onb-steps .s.cur{ background:var(--accent); opacity:.5; }
+.onb-opt{ padding:12px 14px; border:1.5px solid var(--border); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.onb-opt.sel{ border-color:var(--accent); background:var(--accent-wash); }
+.onb-opt .n{ font-size:12.5px; font-weight:500; }
+.onb-opt .d{ font-size:11px; color:var(--text-3); }
+
+/* toast */
+.toastwrap{ position:fixed; bottom:18px; right:18px; z-index:400; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.toast{ display:flex; align-items:center; gap:9px; background:var(--bg-surface-2); border:1px solid var(--border); border-radius:7px; padding:10px 14px; box-shadow:var(--shadow-pop); font-size:12px; max-width:320px; animation:toastin .18s ease; }
+@keyframes toastin{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
+.toast .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none; }
+.toast.success .dot{ background:var(--success); } .toast.error .dot{ background:var(--danger); }
+
+h1,h2,h3{ margin:0; text-wrap:balance; }
+.h1{ font-size:17px; font-weight:600; }
+.sub{ font-size:12px; color:var(--text-3); margin-top:3px; }
+.flexcol{ display:flex; flex-direction:column; }
+.flexrow{ display:flex; align-items:center; }
+.gap8{ gap:8px; } .gap10{ gap:10px; } .gap12{ gap:12px; } .gap16{ gap:16px; } .gap20{ gap:20px; }
+
+/* responsive: phone width */
+@media (max-width:760px){
+  .explorer, .agent-left, .agent-right, .diff-left, .diff-right, .settings-nav{ display:none; }
+  .provider-grid{ grid-template-columns:1fr; }
+  .mode-grid{ grid-template-columns:1fr; }
+  .ctx-grid{ grid-template-columns:1fr; }
+  #view-context, #view-models, #view-permissions{ padding:16px; }
+  .settings-body{ padding:16px; }
+  .navrail{ width:50px; }
+  .palette{ width:94vw; }
+}
+</style>
+
+<div id="app">
+
+  <!-- ===================== TITLE BAR ===================== -->
+  <div class="titlebar">
+    <div class="tb-left">
+      <div class="tb-dots"><span></span><span></span><span></span></div>
+      <div class="tb-path mono">ledger <span style="color:var(--text-disabled)">—</span> <b>payments-service</b></div>
+    </div>
+    <div class="tb-right">
+      <button class="pill ok" id="cloudPill" title="Control plane connection (Node API + Clerk)"><span class="dot"></span><span id="cloudPillText">Control plane: connected</span></button>
+      <button class="pill live" id="modePill">Controlled Auto-run</button>
+      <button class="iconbtn" id="themeBtn" title="Toggle theme">
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"/></svg>
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="display:none"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg>
+      </button>
+      <button class="iconbtn" id="paletteBtn" title="Command palette (⌘K)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 9h.01M8 15h.01M12 9h4M12 15h4"/></svg>
+      </button>
+      <span class="kbd">⌘K</span>
+    </div>
+  </div>
+
+  <div class="shell">
+    <!-- ===================== NAV RAIL ===================== -->
+    <div class="navrail" id="navrail">
+      <button class="navbtn active" data-view="workspace" title="Workspace">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
+        <span>Code</span>
+      </button>
+      <button class="navbtn" data-view="agent" title="Agent Command Center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v3M12 18v3M4.2 7.8l2.6 1.5M17.2 14.7l2.6 1.5M4.2 16.2l2.6-1.5M17.2 9.3l2.6-1.5"/><circle cx="12" cy="12" r="4.2"/></svg>
+        <span>Agent</span>
+      </button>
+      <button class="navbtn notify" data-view="diff" title="Diff Review">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 4v12a2 2 0 0 0 2 2h8M8 4l-3 3M8 4l3 3M16 20l3-3M16 20l-3-3"/></svg>
+        <span>Diff</span>
+      </button>
+      <button class="navbtn" data-view="context" title="Context Engine">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Context</span>
+      </button>
+      <button class="navbtn" data-view="models" title="Models & Providers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/></svg>
+        <span>Models</span>
+      </button>
+      <button class="navbtn" data-view="permissions" title="Permissions & Security">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/></svg>
+        <span>Access</span>
+      </button>
+      <div class="spacer"></div>
+      <button class="navbtn" data-view="settings" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.6-2-3.4-2.4.7a7.8 7.8 0 0 0-2.6-1.5L14 2h-4l-.4 2.7a7.8 7.8 0 0 0-2.6 1.5l-2.4-.7-2 3.4 2 1.6a7.8 7.8 0 0 0 0 3l-2 1.6 2 3.4 2.4-.7a7.8 7.8 0 0 0 2.6 1.5L10 22h4l.4-2.7a7.8 7.8 0 0 0 2.6-1.5l2.4.7 2-3.4-2-1.6Z"/></svg>
+        <span>Settings</span>
+      </button>
+    </div>
+
+    <!-- ===================== WORKSPACE VIEW ===================== -->
+    <div class="view active" id="view-workspace">
+      <div class="explorer">
+        <div class="explorer-head"><span class="lbl">Explorer</span>
+          <button class="iconbtn" style="width:20px;height:20px" title="New file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div class="filetree" id="filetree"></div>
+      </div>
+
+      <div class="editorcol">
+        <div class="tabs" id="tabs"></div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div class="codearea scroll-y" id="codearea"></div>
+        <div class="panelbar">
+          <span class="seg active" data-panel="terminal">TERMINAL</span>
+          <span class="seg" data-panel="problems">PROBLEMS · 1</span>
+          <span class="seg" data-panel="output">OUTPUT</span>
+        </div>
+        <div class="terminal" id="terminal"></div>
+        <div class="statusbar">
+          <div class="grp"><span>main ↑2</span><span id="statusLang">TypeScript</span><span id="statusIdx">Index: up to date</span></div>
+          <div class="grp"><span>Ln 9, Col 42</span><span>UTF-8</span></div>
+        </div>
+      </div>
+
+      <div class="agentteaser">
+        <span class="lbl">Ask Ledger</span>
+        <div class="sub" style="margin-top:4px">Ask about this repository with the current file as context.</div>
+        <div class="teaser-ask">
+          <textarea placeholder="e.g. Where is the password hash compared on login?" id="teaserInput"></textarea>
+          <button class="btn primary" id="teaserAsk" style="justify-content:center">Ask in Agent Command Center</button>
+        </div>
+        <div style="margin-top:20px" class="flexcol gap10">
+          <span class="lbl">Recent tasks</span>
+          <div class="card" style="padding:10px 12px;">
+            <div style="font-size:12px;color:var(--text);font-weight:500">Add password reset flow</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:3px">Completed · 3 files changed</div>
+          </div>
+          <div class="card" style="padding:10px 12px;">
+            <div style="font-size:12px;color:var(--text);font-weight:500">Fix flaky session test</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:3px">Completed · 1 file changed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== AGENT VIEW ===================== -->
+    <div class="view" id="view-agent">
+      <div class="agent-left">
+        <div>
+          <span class="lbl">Task</span>
+          <div class="taskbox" id="agentTaskText">Add password reset functionality to the auth service, with email delivery and token expiry.</div>
+        </div>
+        <div>
+          <span class="lbl">Execution plan</span>
+          <div class="plan" id="planList"></div>
+        </div>
+        <div>
+          <span class="lbl">Context in use</span>
+          <div class="chiprow" id="agentChips"></div>
+        </div>
+        <div class="controls">
+          <button class="btn" id="btnPause">Pause</button>
+          <button class="btn danger" id="btnStop">Stop</button>
+          <button class="btn primary" id="btnRun" style="margin-left:auto">Run task</button>
+        </div>
+      </div>
+
+      <div class="agent-center">
+        <div class="agent-header">
+          <span class="lbl">Agent activity</span>
+          <div class="flexrow gap12">
+            <span class="mono" style="font-size:10.5px;color:var(--text-3)" id="agentModelLabel">Model: claude-sonnet-5</span>
+          </div>
+        </div>
+        <div class="stream scroll-y" id="stream"></div>
+      </div>
+
+      <div class="agent-right">
+        <div>
+          <span class="lbl">Usage</span>
+          <div class="flexcol gap16" style="margin-top:10px">
+            <div class="metric"><div class="l">STEPS</div><div class="v tnum" id="mSteps">0 / 20</div></div>
+            <div class="metric"><div class="l">ELAPSED · BUDGET 10M</div><div class="v tnum" id="mTime">0:00</div></div>
+            <div class="metric"><div class="l">TOKENS</div><div class="v tnum" id="mTokens">0 in · 0 out</div></div>
+            <div class="metric"><div class="l">EST. COST</div><div class="v tnum" id="mCost">$0.00</div></div>
+          </div>
+        </div>
+        <div>
+          <span class="lbl">Files touched</span>
+          <div id="filesTouched" style="margin-top:8px"></div>
+        </div>
+        <div>
+          <span class="lbl">Permission scope</span>
+          <div class="flexcol gap8" style="margin-top:8px;font-size:11.5px;color:var(--text-2);line-height:1.6">
+            <div>Workspace: payments-service only</div>
+            <div>Commands: npm, test runner (approved list)</div>
+            <div>Network: cloud model gateway only</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== DIFF VIEW ===================== -->
+    <div class="view" id="view-diff">
+      <div class="diff-left" id="diffLeft">
+        <div class="diff-filehead"><span class="lbl">Changed files</span></div>
+        <div id="diffFileList"></div>
+      </div>
+      <div class="diff-center">
+        <div class="diff-toolbar">
+          <div>
+            <div style="font-weight:600;font-size:13px" id="diffCurrentFile">src/services/auth.service.ts</div>
+            <div class="sub" id="diffCurrentStat">+31 −3 · checkpoint saved before this task</div>
+          </div>
+          <div class="flexrow gap8">
+            <button class="btn sm" id="btnRejectAll">Reject all</button>
+            <button class="btn sm primary" id="btnAcceptAll">Accept all</button>
+          </div>
+        </div>
+        <div class="diff-body scroll-y" id="diffBody"></div>
+      </div>
+      <div class="diff-right">
+        <div>
+          <span class="lbl">Checkpoint</span>
+          <div class="card" style="padding:12px;margin-top:8px">
+            <div style="font-size:12px;color:var(--text)">Saved before "Add password reset functionality"</div>
+            <div class="sub" style="margin-top:4px">3 files · 2 minutes ago</div>
+            <button class="btn sm" style="margin-top:10px;width:100%;justify-content:center" id="btnRollback">Roll back this task</button>
+          </div>
+        </div>
+        <div>
+          <span class="lbl">Review summary</span>
+          <div class="flexcol gap8" style="margin-top:8px;font-size:12px;color:var(--text-2)">
+            <div class="flexrow" style="justify-content:space-between"><span>Hunks accepted</span><span class="tnum mono" id="sumAccepted" style="color:var(--text)">0</span></div>
+            <div class="flexrow" style="justify-content:space-between"><span>Hunks rejected</span><span class="tnum mono" id="sumRejected" style="color:var(--text)">0</span></div>
+            <div class="flexrow" style="justify-content:space-between"><span>Tests run</span><span class="tnum mono" style="color:var(--success)">2 passed</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== CONTEXT VIEW ===================== -->
+    <div class="view scroll-y" id="view-context">
+      <div>
+        <h1 class="h1">Context engine</h1>
+        <div class="sub">What Ledger sent to the model for the current task, and why.</div>
+      </div>
+      <div class="ctx-grid">
+        <div class="card" style="padding:4px 0">
+          <div style="padding:12px 16px 6px"><span class="lbl">Retrieved chunks · ranked</span></div>
+          <div id="ctxList"></div>
+        </div>
+        <div class="flexcol gap16">
+          <div class="card" style="padding:16px">
+            <span class="lbl">Indexing</span>
+            <div style="font-size:12px;color:var(--text-2);margin-top:8px">payments-service · 412 files</div>
+            <div class="barwrap"><div id="idxBar" style="width:100%"></div></div>
+            <div class="flexrow" style="justify-content:space-between;margin-top:6px">
+              <span class="sub" id="idxLabel">Up to date · last indexed 2m ago</span>
+              <button class="btn sm" id="btnReindex">Reindex</button>
+            </div>
+          </div>
+          <div class="card" style="padding:16px">
+            <span class="lbl">Exclusions</span>
+            <div class="flexcol gap8" style="margin-top:10px">
+              <div class="flexrow" style="justify-content:space-between"><span class="chip mono">node_modules/</span><span style="font-size:11px;color:var(--text-3)">auto</span></div>
+              <div class="flexrow" style="justify-content:space-between"><span class="chip mono">.env*</span><span style="font-size:11px;color:var(--text-3)">auto · secrets</span></div>
+              <div class="flexrow" style="justify-content:space-between"><span class="chip mono">dist/</span><span style="font-size:11px;color:var(--text-3)">auto · build output</span></div>
+              <div class="flexrow" style="justify-content:space-between"><span class="chip mono">tests/fixtures/</span><span style="font-size:11px;color:var(--text-3)">manual</span></div>
+            </div>
+          </div>
+          <div class="card" style="padding:16px">
+            <span class="lbl">Transmission</span>
+            <div style="font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.6">Only the chunks listed here, plus open files and your prompt, leave this machine. Full repository text is never uploaded.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== MODELS VIEW ===================== -->
+    <div class="view scroll-y" id="view-models">
+      <div class="flexrow" style="justify-content:space-between">
+        <div>
+          <h1 class="h1">Models & providers</h1>
+          <div class="sub">Routed through the server-side model gateway (Anthropic, OpenAI, Google). Provider keys never leave the server.</div>
+        </div>
+        <button class="btn sm" id="btnSimulateDown">Simulate: provider unavailable</button>
+      </div>
+      <div id="providerBanner"></div>
+      <div class="provider-grid" id="providerGrid"></div>
+      <div class="card" style="padding:4px 0">
+        <div style="padding:14px 16px 6px"><span class="lbl">Model assignment by task</span></div>
+        <table class="tbl">
+          <thead><tr><th>Task</th><th>Model</th><th>Latency (p50)</th><th>Status</th></tr></thead>
+          <tbody id="modelTableBody"></tbody>
+        </table>
+      </div>
+      <div class="card" style="padding:16px">
+        <span class="lbl">Usage this period</span>
+        <div class="flexrow gap20" style="margin-top:12px;flex-wrap:wrap">
+          <div class="metric"><div class="l">REQUESTS</div><div class="v tnum">4,218</div></div>
+          <div class="metric"><div class="l">TOKENS</div><div class="v tnum">2.9M</div></div>
+          <div class="metric"><div class="l">COST</div><div class="v tnum">$18.40</div></div>
+          <div class="metric"><div class="l">RATE LIMIT</div><div class="v tnum">41%</div></div>
+        </div>
+        <div class="barwrap" style="margin-top:12px"><div style="width:41%"></div></div>
+      </div>
+    </div>
+
+    <!-- ===================== PERMISSIONS VIEW ===================== -->
+    <div class="view scroll-y" id="view-permissions">
+      <div>
+        <h1 class="h1">Agent permissions & autonomy</h1>
+        <div class="sub">Controls how much the agent can do without stopping to ask.</div>
+      </div>
+      <div class="mode-grid" id="modeGrid"></div>
+      <div class="card" style="padding:4px 0">
+        <div style="padding:14px 16px 6px"><span class="lbl">Command allowlist</span></div>
+        <div class="permlist" id="permList"></div>
+      </div>
+      <div class="card" style="padding:4px 0">
+        <div style="padding:14px 16px 6px"><span class="lbl">Approval history</span></div>
+        <table class="tbl">
+          <thead><tr><th>Action</th><th>Task</th><th>Decision</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">npm install nodemailer</td><td>Add password reset</td><td style="color:var(--success)">Approved</td><td class="sub">2m ago</td></tr>
+            <tr><td class="mono">rm -rf dist/</td><td>Clean build</td><td style="color:var(--danger)">Rejected</td><td class="sub">1h ago</td></tr>
+            <tr><td class="mono">npm run migrate</td><td>Schema update</td><td style="color:var(--success)">Approved</td><td class="sub">3h ago</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== SETTINGS VIEW ===================== -->
+    <div class="view" id="view-settings">
+      <div class="settings-nav" id="settingsNav"></div>
+      <div class="settings-body scroll-y" id="settingsBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- command palette -->
+<div class="palette-overlay" id="paletteOverlay" hidden>
+  <div class="palette">
+    <input type="text" id="paletteInput" placeholder="Type a command or search…" autocomplete="off">
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<!-- onboarding -->
+<div class="onb-overlay" id="onbOverlay" hidden></div>
+
+<div class="toastwrap" id="toastwrap"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- persistence helpers ---------------- */
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){ return d; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+/* ---------------- theme ---------------- */
+const root=document.documentElement;
+function applyTheme(mode){ // 'system'|'light'|'dark'
+  if(mode==='light'){ root.setAttribute('data-theme','light'); }
+  else if(mode==='dark'){ root.setAttribute('data-theme','dark'); }
+  else { root.removeAttribute('data-theme'); }
+  const sun=document.getElementById('themeIconSun'), moon=document.getElementById('themeIconMoon');
+  const isDark = mode==='dark' || (mode==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  sun.style.display = isDark ? 'none':'block';
+  moon.style.display = isDark ? 'block':'none';
+}
+let themeMode = lsGet('ledger_theme','system');
+applyTheme(themeMode);
+document.getElementById('themeBtn').addEventListener('click', ()=>{
+  const order=['system','dark','light'];
+  themeMode = order[(order.indexOf(themeMode)+1)%order.length];
+  lsSet('ledger_theme', themeMode); applyTheme(themeMode);
+  toast(`Theme: ${themeMode}`, 'info');
+  renderSettings();
+});
+
+/* ---------------- toast ---------------- */
+function toast(msg, kind){
+  const wrap=document.getElementById('toastwrap');
+  const el=document.createElement('div');
+  el.className='toast'+(kind?(' '+kind):'');
+  el.innerHTML = `<span class="dot"></span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .25s ease'; el.style.opacity='0'; setTimeout(()=>el.remove(),250); }, 3200);
+}
+
+/* ---------------- navigation / routing ---------------- */
+const views=['workspace','agent','diff','context','models','permissions','settings'];
+function showView(name){
+  if(!views.includes(name)) name='workspace';
+  views.forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('active', v===name);
+  });
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(location.hash.slice(1)!==name) location.hash=name;
+}
+document.getElementById('navrail').addEventListener('click', e=>{
+  const btn=e.target.closest('.navbtn'); if(!btn) return;
+  showView(btn.dataset.view);
+});
+window.addEventListener('hashchange', ()=> showView(location.hash.slice(1)));
+
+/* ================= WORKSPACE: file tree + editor + terminal ================= */
+const FILES = {
+  'src/routes/auth.ts': {lang:'TypeScript', code:
+`import { Router } from 'express';
+import { login, logout, refreshSession } from '../services/auth.service';
+
+export const router = Router();
+
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  const session = await login(email, password);
+  res.status(200).json(session);
+});
+
+router.post('/logout', async (req, res) => {
+  await logout(req.session.id);
+  res.status(204).end();
+});
+
+router.post('/refresh', async (req, res) => {
+  const session = await refreshSession(req.session.id);
+  res.status(200).json(session);
+});`},
+  'src/routes/password-reset.ts': {lang:'TypeScript', modified:true, code:
+`import { Router } from 'express';
+import { requestPasswordReset, confirmPasswordReset } from '../services/auth.service';
+
+export const router = Router();
+
+router.post('/password-reset/request', async (req, res) => {
+  const { email } = req.body;
+  await requestPasswordReset(email);
+  res.status(202).json({ status: 'sent' });
+});
+
+router.post('/password-reset/confirm', async (req, res) => {
+  const { token, newPassword } = req.body;
+  await confirmPasswordReset(token, newPassword);
+  res.status(200).json({ status: 'ok' });
+});`},
+  'src/routes/users.ts': {lang:'TypeScript', code:
+`import { Router } from 'express';
+import { getUserById, updateUser } from '../services/user.service';
+
+export const router = Router();
+
+router.get('/users/:id', async (req, res) => {
+  const user = await getUserById(req.params.id);
+  res.status(200).json(user);
+});
+
+router.patch('/users/:id', async (req, res) => {
+  const user = await updateUser(req.params.id, req.body);
+  res.status(200).json(user);
+});`},
+  'src/services/mailer.ts': {lang:'TypeScript', code:
+`import nodemailer from 'nodemailer';
+
+const transport = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: 587,
+});
+
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const resetUrl = \`https://app.payments.dev/reset?token=\${token}\`;
+  await transport.sendMail({
+    to, subject: 'Reset your password',
+    text: \`Click to reset your password: \${resetUrl}\`,
+  });
+}`},
+  'src/db/schema.sql': {lang:'SQL', code:
+`create table users (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  password_hash text not null,
+  created_at timestamptz default now()
+);
+
+create table password_reset_tokens (
+  token text primary key,
+  user_id uuid references users(id),
+  expires_at timestamptz not null
+);`},
+  'tests/auth.test.ts': {lang:'TypeScript', modified:true, code:
+`import { requestPasswordReset, confirmPasswordReset } from '../src/services/auth.service';
+
+describe('password reset', () => {
+  it('sends reset email for valid account', async () => {
+    await expect(requestPasswordReset('a@b.com')).resolves.not.toThrow();
+  });
+
+  it('rejects expired reset token', async () => {
+    await expect(confirmPasswordReset('expired-token', 'newpw')).rejects.toThrow();
+  });
+});`},
+  'package.json': {lang:'JSON', code:
+`{
+  "name": "payments-service",
+  "version": "1.4.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "build": "tsc -p ."
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "nodemailer": "^6.9.0"
+  }
+}`}
+};
+const TREE = [
+  {t:'src', dir:true, depth:0},
+  {t:'routes', dir:true, depth:1},
+  {t:'auth.ts', depth:2, path:'src/routes/auth.ts'},
+  {t:'password-reset.ts', depth:2, path:'src/routes/password-reset.ts'},
+  {t:'users.ts', depth:2, path:'src/routes/users.ts'},
+  {t:'services', dir:true, depth:1},
+  {t:'mailer.ts', depth:2, path:'src/services/mailer.ts'},
+  {t:'db', dir:true, depth:1},
+  {t:'schema.sql', depth:2, path:'src/db/schema.sql'},
+  {t:'tests', dir:true, depth:0},
+  {t:'auth.test.ts', depth:1, path:'tests/auth.test.ts'},
+  {t:'package.json', depth:0, path:'package.json'},
+];
+
+function hl(code){
+  const esc = s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  code = esc(code);
+  const pattern = /(\/\/.*$)|('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`)|\b(import|export|const|let|var|async|await|function|return|if|else|new|from|try|catch|throw|class|extends|interface|type|public|private|readonly|this|null|undefined|true|false|default|primary|key|references|create|table|not)\b|\b(\d+)\b|([A-Za-z_$][A-Za-z0-9_$]*)(?=\()/gmi;
+  return code.replace(pattern, (m,com,str,kw,num,fn)=>{
+    if(com) return `<span class="tok-com">${com}</span>`;
+    if(str) return `<span class="tok-str">${str}</span>`;
+    if(kw) return `<span class="tok-kw">${kw}</span>`;
+    if(num) return `<span class="tok-num">${num}</span>`;
+    if(fn) return `<span class="tok-fn">${fn}</span>`;
+    return m;
+  });
+}
+
+let openTabs=['src/routes/auth.ts','src/routes/password-reset.ts','src/routes/users.ts'];
+let activeTab='src/routes/password-reset.ts';
+
+function renderFiletree(){
+  const el=document.getElementById('filetree');
+  el.innerHTML = TREE.map(f=>{
+    if(f.dir){
+      return `<div class="frow" style="padding-left:${14+f.depth*14}px"><span class="chev">▸</span><span class="fname">${f.t}</span></div>`;
+    }
+    const F=FILES[f.path];
+    const tag = f.path===activeTab? '' : (F.modified? '<span class="tag m">M</span>' : '');
+    return `<div class="frow ${f.path===activeTab?'active':''}" style="padding-left:${14+f.depth*14}px" data-path="${f.path}"><span class="chev">·</span><span class="fname">${f.t}</span>${tag}</div>`;
+  }).join('');
+  el.querySelectorAll('.frow[data-path]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const p=row.dataset.path;
+      if(!openTabs.includes(p)) openTabs.push(p);
+      activeTab=p; renderWorkspace();
+    });
+  });
+}
+function renderTabs(){
+  const el=document.getElementById('tabs');
+  el.innerHTML = openTabs.map(p=>{
+    const name=p.split('/').pop();
+    return `<div class="tab ${p===activeTab?'active':''}" data-path="${p}"><span>${name}</span><span class="x" data-close="${p}">×</span></div>`;
+  }).join('');
+  el.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', e=>{
+      if(e.target.dataset.close){
+        const p=e.target.dataset.close;
+        openTabs=openTabs.filter(x=>x!==p);
+        if(activeTab===p) activeTab = openTabs[openTabs.length-1] || Object.keys(FILES)[0];
+        if(openTabs.length===0) openTabs=[activeTab];
+        renderWorkspace();
+        return;
+      }
+      activeTab=t.dataset.path; renderWorkspace();
+    });
+  });
+}
+function renderCode(){
+  const F=FILES[activeTab];
+  document.getElementById('breadcrumb').innerHTML = activeTab.split('/').map((p,i,arr)=> i<arr.length-1? `${p} <span style="color:var(--text-disabled)">›</span> ` : `<b>${p}</b>`).join('');
+  document.getElementById('statusLang').textContent = F.lang;
+  const lines=F.code.split('\n');
+  document.getElementById('codearea').innerHTML = lines.map((l,i)=>
+    `<div class="codeline"><span class="ln">${i+1}</span><span class="code">${hl(l)||'&nbsp;'}</span></div>`
+  ).join('');
+}
+function renderWorkspace(){ renderFiletree(); renderTabs(); renderCode(); }
+
+const TERMLINES = [
+  {c:'npm test -- auth.test.ts', cmd:true},
+  {c:'PASS  tests/auth.test.ts', ok:true},
+  {c:'  ✓ sends reset email for valid account (41ms)'},
+  {c:'  ✓ rejects expired reset token (12ms)'},
+  {c:'Tests: 2 passed, 2 total'},
+];
+document.getElementById('terminal').innerHTML = TERMLINES.map(l=>`<div class="termline ${l.cmd?'cmd':''} ${l.ok?'ok':''}">${l.c}</div>`).join('');
+
+document.getElementById('teaserAsk').addEventListener('click', ()=>{
+  const v=document.getElementById('teaserInput').value.trim();
+  if(v) agentState.task = v;
+  showView('agent');
+  toast('Opened in Agent Command Center', 'info');
+});
+document.querySelectorAll('.panelbar .seg').forEach(s=>{
+  s.addEventListener('click', ()=>{
+    document.querySelectorAll('.panelbar .seg').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');
+  });
+});
+
+renderWorkspace();
+
+/* ================= AGENT VIEW ================= */
+const PLAN_STEPS = [
+  'Inspect auth service & routes',
+  'Add password-reset routes',
+  'Implement token generation + expiry',
+  'Wire mailer service for reset email',
+  'Write tests for new endpoints',
+  'Run full test suite',
+  'Present diff for review',
+];
+const ACTIVITY_SCRIPT = [
+  {tag:'READ', title:'Inspected src/routes/auth.ts', detail:'Found existing login/logout handlers; no reset flow present.'},
+  {tag:'EDIT', title:'Created src/routes/password-reset.ts', detail:'+14 lines · request + confirm endpoints'},
+  {tag:'EDIT', title:'Updated src/services/auth.service.ts', detail:'+28 −2 lines · token generation, hashing, expiry'},
+  {tag:'APPROVAL', title:'Requested command: npm install nodemailer', detail:'Adds a dependency outside the current lockfile.', needsApproval:true},
+  {tag:'EDIT', title:'Updated src/services/mailer.ts', detail:'+16 lines · sendPasswordResetEmail()'},
+  {tag:'RUN', title:'$ npm test -- auth.test.ts', detail:'FAIL  2 passed, 1 failed — expired-token case threw instead of returning 400', status:'failed'},
+  {tag:'EDIT', title:'Patched src/services/auth.service.ts', detail:'−1 +3 lines · catch expired-token error, return 400'},
+  {tag:'RUN', title:'$ npm test -- auth.test.ts', detail:'PASS  2 passed, 2 total', status:'done'},
+  {tag:'PLAN', title:'Prepared diff for review', detail:'3 files changed · ready in Diff Review'},
+];
+
+let agentState = { running:false, paused:false, stepIndex:0, planIndex:-1, tokensIn:0, tokensOut:0, startTime:null, timer:null, task:'Add password reset functionality to the auth service, with email delivery and token expiry.' };
+let autonomyMode = lsGet('ledger_mode','auto'); // 'suggest'|'approve'|'auto'
+
+function renderPlan(){
+  const el=document.getElementById('planList');
+  el.innerHTML = PLAN_STEPS.map((s,i)=>{
+    let state = i < agentState.planIndex ? 'done' : (i===agentState.planIndex ? 'active':'pending');
+    let marker = state==='done'?'✓':state==='active'?'›':'·';
+    return `<div class="plan-row ${state}"><span class="plan-marker ${state}">${marker}</span><span>${s}</span></div>`;
+  }).join('');
+}
+function renderChips(){
+  document.getElementById('agentChips').innerHTML = ['auth.service.ts','password-reset.ts','mailer.ts','schema.sql'].map(c=>`<span class="chip">${c}</span>`).join('');
+}
+function renderFilesTouched(list){
+  document.getElementById('filesTouched').innerHTML = list.map(f=>`<div class="filerow"><span class="f">${f.n}</span><span class="d">${f.d}</span></div>`).join('') || '<div class="sub">No files changed yet.</div>';
+}
+document.getElementById('agentTaskText').textContent = agentState.task;
+renderPlan(); renderChips(); renderFilesTouched([]);
+
+function fmtTime(s){ const m=Math.floor(s/60), r=s%60; return `${m}:${String(r).padStart(2,'0')}`; }
+function appendActivity(item){
+  const stream=document.getElementById('stream');
+  const div=document.createElement('div');
+  div.className='activity';
+  const statusHtml = item.status ? `<span class="astatus ${item.status}">${item.status}</span>` : '';
+  div.innerHTML = `<span class="atag ${item.tag}">${item.tag}</span><div class="abody"><div class="atitle">${item.title}</div><div class="adetail">${item.detail}</div></div>${statusHtml}`;
+  stream.appendChild(div);
+  stream.scrollTop = stream.scrollHeight;
+  return div;
+}
+function appendApproval(item, onDecide){
+  const stream=document.getElementById('stream');
+  const div=document.createElement('div');
+  div.className='approvalcard';
+  div.innerHTML = `<div class="t">Approval required — ${item.title}</div><div class="d">${item.detail}</div>
+    <div class="btns"><button class="btn sm primary" data-d="approve">Approve</button><button class="btn sm danger" data-d="reject">Reject</button></div>`;
+  stream.appendChild(div); stream.scrollTop=stream.scrollHeight;
+  div.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+    const decision=b.dataset.d;
+    div.remove();
+    appendActivity({tag:'APPROVAL', title:item.title, detail: decision==='approve'? 'Approved by you — continuing.' : 'Rejected by you — agent will work around this.', status: decision==='approve'?'approved':'failed'});
+    onDecide(decision);
+  }));
+}
+
+function resetAgentUI(){
+  document.getElementById('stream').innerHTML='';
+  agentState.planIndex=-1; agentState.stepIndex=0; agentState.tokensIn=0; agentState.tokensOut=0;
+  renderPlan(); renderFilesTouched([]);
+  document.getElementById('mSteps').textContent='0 / 20';
+  document.getElementById('mTime').textContent='0:00';
+  document.getElementById('mTokens').textContent='0 in · 0 out';
+  document.getElementById('mCost').textContent='$0.00';
+}
+
+function updateTelemetry(){
+  document.getElementById('mSteps').textContent = `${agentState.stepIndex} / 20`;
+  const elapsed = agentState.startTime? Math.floor((Date.now()-agentState.startTime)/1000) : 0;
+  document.getElementById('mTime').textContent = fmtTime(elapsed);
+  document.getElementById('mTokens').textContent = `${agentState.tokensIn.toLocaleString()} in · ${agentState.tokensOut.toLocaleString()} out`;
+  document.getElementById('mCost').textContent = `$${(agentState.tokensIn*0.000003 + agentState.tokensOut*0.000015).toFixed(2)}`;
+}
+
+function runNextStep(){
+  if(!agentState.running || agentState.paused) return;
+  if(agentState.stepIndex >= ACTIVITY_SCRIPT.length){
+    agentState.running=false;
+    document.getElementById('btnRun').disabled=false;
+    document.getElementById('btnRun').textContent='Run task';
+    clearInterval(agentState.timer);
+    appendActivity({tag:'PLAN', title:'Task complete', detail:'Review the diff when ready.', status:'done'});
+    toast('Agent finished — diff ready for review', 'success');
+    buildDiffFromRun();
+    return;
+  }
+  const item = ACTIVITY_SCRIPT[agentState.stepIndex];
+  agentState.planIndex = Math.min(Math.floor(agentState.stepIndex/1.3), PLAN_STEPS.length-1);
+  renderPlan();
+  agentState.tokensIn += 800+Math.floor(Math.random()*900);
+  agentState.tokensOut += 140+Math.floor(Math.random()*220);
+  agentState.stepIndex++;
+  updateTelemetry();
+
+  const doStep = (tagOverride)=>{
+    const it = {...item, status: item.status || 'done'};
+    appendActivity(it);
+    if(item.tag==='EDIT'){
+      const fname = item.title.split(' ').pop();
+      const touched = Array.from(document.querySelectorAll('.filerow .f')).map(e=>e.textContent);
+      renderFilesTouched([...touched.filter((v,i,a)=>a.indexOf(v)===i).map(n=>({n, d:'+'})), {n:fname.split('/').pop(), d: item.detail.split('·')[0].trim()}]);
+    }
+    setTimeout(runNextStep, 650);
+  };
+
+  if(item.needsApproval && autonomyMode!=='auto'){
+    appendApproval(item, (decision)=>{ setTimeout(runNextStep, 500); });
+  } else if(item.needsApproval && autonomyMode==='auto'){
+    appendActivity({tag:'APPROVAL', title:item.title, detail: item.detail+' — auto-approved (Controlled auto-run, low-risk).', status:'approved'});
+    setTimeout(runNextStep, 650);
+  } else {
+    doStep();
+  }
+
+  if(autonomyMode==='suggest' && agentState.stepIndex===2){
+    agentState.running=false;
+    document.getElementById('btnRun').disabled=false;
+    document.getElementById('btnRun').textContent='Run task';
+    clearInterval(agentState.timer);
+    setTimeout(()=>{
+      appendActivity({tag:'PLAN', title:'Suggest mode: paused before writing files', detail:'Proposed next edits are ready — switch to Approve actions or Controlled auto-run to let the agent write them, or review the plan and continue manually.', status:'running'});
+      toast('Suggest mode — agent stopped before making changes', 'info');
+    }, 700);
+  }
+}
+
+document.getElementById('btnRun').addEventListener('click', ()=>{
+  if(agentState.running) return;
+  resetAgentUI();
+  agentState.running=true; agentState.paused=false; agentState.startTime=Date.now();
+  document.getElementById('btnRun').disabled=true;
+  document.getElementById('btnRun').textContent='Running…';
+  agentState.timer = setInterval(updateTelemetry, 1000);
+  appendActivity({tag:'PLAN', title:'Planning task', detail:`Mode: ${modeLabel(autonomyMode)} · Model: claude-sonnet-5`, status:'done'});
+  setTimeout(runNextStep, 500);
+});
+document.getElementById('btnPause').addEventListener('click', ()=>{
+  if(!agentState.running) return;
+  agentState.paused=!agentState.paused;
+  document.getElementById('btnPause').textContent = agentState.paused? 'Resume':'Pause';
+  toast(agentState.paused? 'Agent paused':'Agent resumed', 'info');
+  if(!agentState.paused) runNextStep();
+});
+document.getElementById('btnStop').addEventListener('click', ()=>{
+  if(!agentState.running) return;
+  agentState.running=false; agentState.paused=false;
+  clearInterval(agentState.timer);
+  document.getElementById('btnRun').disabled=false;
+  document.getElementById('btnRun').textContent='Run task';
+  document.getElementById('btnPause').textContent='Pause';
+  appendActivity({tag:'PLAN', title:'Stopped by user', detail:'Partial changes remain on disk — review or roll back in Diff Review.', status:'failed'});
+  toast('Agent stopped', 'error');
+});
+
+/* ================= DIFF VIEW ================= */
+const DIFF_FILES = [
+  {path:'src/routes/password-reset.ts', add:14, del:0, hunks:[
+    {loc:'@@ -0,0 +1,14 @@', lines:[
+      {t:"import { Router } from 'express';", k:'add'},
+      {t:"import { requestPasswordReset, confirmPasswordReset } from '../services/auth.service';", k:'add'},
+      {t:'', k:'add'},
+      {t:'export const router = Router();', k:'add'},
+      {t:'', k:'add'},
+      {t:"router.post('/password-reset/request', async (req, res) => {", k:'add'},
+      {t:'  await requestPasswordReset(req.body.email);', k:'add'},
+      {t:"  res.status(202).json({ status: 'sent' });", k:'add'},
+      {t:'});', k:'add'},
+    ]}
+  ]},
+  {path:'src/services/auth.service.ts', add:31, del:3, hunks:[
+    {loc:'@@ -18,6 +18,22 @@ export async function login', lines:[
+      {t:'export async function login(email: string, password: string) {', k:'ctx'},
+      {t:'  const user = await findUserByEmail(email);', k:'ctx'},
+      {t:'  if (!verifyPassword(password, user.passwordHash)) throw new AuthError();', k:'ctx'},
+      {t:'  return createSession(user.id);', k:'ctx'},
+      {t:'}', k:'ctx'},
+      {t:'', k:'ctx'},
+      {t:'export async function requestPasswordReset(email: string) {', k:'add'},
+      {t:'  const user = await findUserByEmail(email);', k:'add'},
+      {t:'  if (!user) return;', k:'add'},
+      {t:'  const token = generateToken();', k:'add'},
+      {t:'  await storeResetToken(token, user.id, addMinutes(new Date(), 30));', k:'add'},
+      {t:'  await sendPasswordResetEmail(user.email, token);', k:'add'},
+      {t:'}', k:'add'},
+    ]},
+    {loc:'@@ -40,4 +56,13 @@ export async function confirmPasswordReset', lines:[
+      {t:'export async function confirmPasswordReset(token: string, newPassword: string) {', k:'add'},
+      {t:'  const record = await getResetToken(token);', k:'add'},
+      {t:'  if (record.expiresAt < new Date()) {', k:'add'},
+      {t:'-   throw new Error(\'expired\');', k:'del'},
+      {t:'+   throw new ExpiredTokenError();', k:'add'},
+      {t:'  }', k:'add'},
+      {t:'  await updatePasswordHash(record.userId, newPassword);', k:'add'},
+      {t:'  await deleteResetToken(token);', k:'add'},
+      {t:'}', k:'add'},
+    ]}
+  ]},
+  {path:'src/services/mailer.ts', add:16, del:0, hunks:[
+    {loc:'@@ -0,0 +1,16 @@', lines:[
+      {t:"import nodemailer from 'nodemailer';", k:'add'},
+      {t:'', k:'add'},
+      {t:'const transport = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: 587 });', k:'add'},
+      {t:'', k:'add'},
+      {t:'export async function sendPasswordResetEmail(to: string, token: string) {', k:'add'},
+      {t:'  const resetUrl = `https://app.payments.dev/reset?token=${token}`;', k:'add'},
+      {t:'  await transport.sendMail({ to, subject: "Reset your password", text: resetUrl });', k:'add'},
+      {t:'}', k:'add'},
+    ]}
+  ]},
+];
+let diffActiveFile = null;
+let hunkDecisions = {}; // key `${path}#${idx}` -> 'accepted'|'rejected'
+
+function diffKey(path,i){ return path+'#'+i; }
+function buildDiffFromRun(){
+  diffActiveFile = DIFF_FILES[0].path;
+  hunkDecisions = {};
+  DIFF_FILES.forEach(f=> f.hunks.forEach((h,i)=> hunkDecisions[diffKey(f.path,i)]='accepted'));
+  renderDiff();
+}
+function renderDiffFileList(){
+  const el=document.getElementById('diffFileList');
+  el.innerHTML = DIFF_FILES.map(f=>`
+    <div class="diffrow ${f.path===diffActiveFile?'active':''}" data-path="${f.path}">
+      <span class="fn">${f.path.split('/').pop()}</span>
+      <span class="stat"><span class="add">+${f.add}</span><span class="del">−${f.del}</span></span>
+    </div>`).join('');
+  el.querySelectorAll('.diffrow').forEach(r=> r.addEventListener('click', ()=>{ diffActiveFile=r.dataset.path; renderDiff(); }));
+}
+function renderDiffBody(){
+  const f = DIFF_FILES.find(x=>x.path===diffActiveFile);
+  document.getElementById('diffCurrentFile').textContent = f.path;
+  document.getElementById('diffCurrentStat').textContent = `+${f.add} −${f.del} · checkpoint saved before this task`;
+  document.getElementById('diffBody').innerHTML = f.hunks.map((h,i)=>{
+    const key=diffKey(f.path,i); const decision = hunkDecisions[key]||'accepted';
+    const lines = h.lines.map(l=>{
+      const cls = l.k==='add'?'add':l.k==='del'?'del':'ctx';
+      const marker = l.k==='add'?'+':l.k==='del'?'−':' ';
+      return `<div class="dline ${cls}"><span class="m">${marker}</span><span class="t">${l.t.replace(/&/g,'&amp;').replace(/</g,'&lt;')||' '}</span></div>`;
+    }).join('');
+    return `<div class="hunk ${decision==='rejected'?'rejected':''}" data-key="${key}">
+      <div class="hunk-head"><span class="loc mono">${h.loc}</span>
+        <div class="flexrow gap8">
+          <span class="sub">${decision==='accepted'?'Accepted':'Rejected'}</span>
+          <button class="toggle ${decision==='accepted'?'on':''}" data-key="${key}"><span class="knob"></span></button>
+        </div>
+      </div>
+      <div class="hunk-lines">${lines}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('diffBody').querySelectorAll('.toggle').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const k=t.dataset.key;
+      hunkDecisions[k] = hunkDecisions[k]==='accepted' ? 'rejected':'accepted';
+      renderDiff();
+    });
+  });
+  updateDiffSummary();
+}
+function updateDiffSummary(){
+  const vals=Object.values(hunkDecisions);
+  document.getElementById('sumAccepted').textContent = vals.filter(v=>v==='accepted').length;
+  document.getElementById('sumRejected').textContent = vals.filter(v=>v==='rejected').length;
+}
+function renderDiffEmpty(){
+  document.querySelector('.diff-center').innerHTML = `<div class="empty-state">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4v12a2 2 0 0 0 2 2h8M8 4l-3 3M8 4l3 3M16 20l3-3M16 20l-3-3"/></svg>
+    <div class="t">No pending changes</div>
+    <div class="d">Run a task from the Agent Command Center to see a reviewable diff here.</div>
+    <button class="btn primary sm" id="emptyGoAgent">Open Agent Command Center</button>
+  </div>`;
+}
+function renderDiff(){
+  if(!diffActiveFile){ renderDiffFileList(); renderDiffEmpty();
+    document.getElementById('emptyGoAgent')?.addEventListener('click', ()=> showView('agent'));
+    return;
+  }
+  // restore structure if it was replaced by empty state
+  if(!document.getElementById('diffCurrentFile')){
+    document.querySelector('.diff-center').innerHTML = `
+      <div class="diff-toolbar">
+        <div><div style="font-weight:600;font-size:13px" id="diffCurrentFile"></div><div class="sub" id="diffCurrentStat"></div></div>
+        <div class="flexrow gap8"><button class="btn sm" id="btnRejectAll">Reject all</button><button class="btn sm primary" id="btnAcceptAll">Accept all</button></div>
+      </div>
+      <div class="diff-body scroll-y" id="diffBody"></div>`;
+    document.getElementById('btnRejectAll').addEventListener('click', ()=>{ Object.keys(hunkDecisions).forEach(k=>hunkDecisions[k]='rejected'); renderDiff(); toast('All hunks rejected','error'); });
+    document.getElementById('btnAcceptAll').addEventListener('click', ()=>{ Object.keys(hunkDecisions).forEach(k=>hunkDecisions[k]='accepted'); renderDiff(); toast('All hunks accepted','success'); });
+  }
+  renderDiffFileList();
+  renderDiffBody();
+}
+document.getElementById('btnRejectAll').addEventListener('click', ()=>{ Object.keys(hunkDecisions).forEach(k=>hunkDecisions[k]='rejected'); renderDiff(); toast('All hunks rejected','error'); });
+document.getElementById('btnAcceptAll').addEventListener('click', ()=>{ Object.keys(hunkDecisions).forEach(k=>hunkDecisions[k]='accepted'); renderDiff(); toast('All hunks accepted','success'); });
+document.getElementById('btnRollback').addEventListener('click', ()=>{
+  const btn=document.getElementById('btnRollback');
+  if(btn.textContent.indexOf('Confirm')===-1){ btn.textContent='Confirm rollback?'; btn.classList.add('danger'); return; }
+  diffActiveFile=null; renderDiff();
+  btn.textContent='Roll back this task'; btn.classList.remove('danger');
+  toast('Rolled back — workspace restored to checkpoint', 'success');
+});
+renderDiffEmpty();
+
+/* ================= CONTEXT VIEW ================= */
+const CTX_ITEMS = [
+  {f:'src/services/auth.service.ts', why:'Open file · directly edited this task', rel:98},
+  {f:'src/routes/password-reset.ts', why:'Open file · new route handlers', rel:95},
+  {f:'src/services/mailer.ts', why:'Imported by auth.service.ts', rel:81},
+  {f:'src/db/schema.sql', why:'Matches symbol "password_reset_tokens"', rel:66},
+  {f:'tests/auth.test.ts', why:'Existing tests for touched module', rel:58},
+  {f:'src/routes/auth.ts', why:'Same route group · login/session patterns', rel:44},
+];
+document.getElementById('ctxList').innerHTML = CTX_ITEMS.map(c=>`
+  <div class="ctx-item">
+    <div class="relbar"><div style="width:${c.rel}%"></div></div>
+    <div class="meta"><div class="fn">${c.f}</div><div class="why">${c.why}</div></div>
+    <div class="pct tnum">${c.rel}%</div>
+  </div>`).join('');
+
+document.getElementById('btnReindex').addEventListener('click', ()=>{
+  const bar=document.getElementById('idxBar'), label=document.getElementById('idxLabel'), btn=document.getElementById('btnReindex');
+  btn.disabled=true; bar.style.width='0%'; label.textContent='Indexing… 0%';
+  let p=0;
+  const iv=setInterval(()=>{
+    p+=Math.random()*18+8; if(p>=100){ p=100; clearInterval(iv); label.textContent='Up to date · just now'; btn.disabled=false; toast('Reindex complete','success'); }
+    else label.textContent=`Indexing… ${Math.floor(p)}%`;
+    bar.style.width=p+'%';
+  }, 260);
+});
+
+/* ================= MODELS VIEW ================= */
+let providerDown=false;
+const PROVIDERS = [
+  {id:'anthropic', name:'Anthropic', status:'ok', models:'claude-sonnet-5, claude-haiku-5.5', rate:'41% of limit', latency:'312ms'},
+  {id:'openai', name:'OpenAI', status:'ok', models:'gpt-5-mini (embeddings)', rate:'12% of limit', latency:'198ms'},
+  {id:'local', name:'Local (BYOK off)', status:'off', models:'Not configured', rate:'—', latency:'—'},
+];
+function renderProviders(){
+  document.getElementById('providerGrid').innerHTML = PROVIDERS.map(p=>{
+    const status = (p.id==='anthropic' && providerDown) ? 'err' : p.status;
+    const label = status==='ok'?'Connected': status==='err'?'Unavailable':'Not configured';
+    const pillClass = status==='ok'?'ok':status==='err'?'err':'';
+    return `<div class="card provider-card">
+      <div class="top"><span class="name">${p.name}</span><span class="pill ${pillClass}"><span class="dot"></span>${label}</span></div>
+      <div class="kv"><span class="k">Models</span><span class="v">${p.models}</span></div>
+      <div class="kv"><span class="k">Rate limit</span><span class="v">${p.rate}</span></div>
+      <div class="kv"><span class="k">Latency p50</span><span class="v">${p.latency}</span></div>
+    </div>`;
+  }).join('');
+  const banner=document.getElementById('providerBanner');
+  banner.innerHTML = providerDown ? `<div class="banner err"><span class="dot blink"></span><span><b>Anthropic provider unavailable.</b> Chat and agent planning have failed over to a secondary model. Completions may be slower until this clears.</span><button class="btn sm act" id="btnReconnect">Retry connection</button></div>` : '';
+  document.getElementById('btnReconnect')?.addEventListener('click', ()=>{
+    providerDown=false; renderProviders(); toast('Reconnected to Anthropic','success');
+  });
+}
+document.getElementById('btnSimulateDown').addEventListener('click', ()=>{
+  providerDown=!providerDown; renderProviders();
+  toast(providerDown? 'Simulated: Anthropic provider down' : 'Simulated outage cleared', providerDown?'error':'success');
+});
+const MODEL_TASKS = [
+  {task:'Chat / codebase Q&A', model:'claude-sonnet-5', opts:['claude-sonnet-5','claude-opus-5.5','claude-haiku-5.5'], lat:'640ms'},
+  {task:'Agent planning / tool use', model:'claude-sonnet-5', opts:['claude-sonnet-5','claude-opus-5.5'], lat:'710ms'},
+  {task:'Inline completion', model:'claude-haiku-5.5', opts:['claude-haiku-5.5','claude-sonnet-5'], lat:'88ms'},
+  {task:'Embeddings', model:'gpt-5-mini', opts:['gpt-5-mini','local-embed-small'], lat:'44ms'},
+];
+function renderModelTable(){
+  document.getElementById('modelTableBody').innerHTML = MODEL_TASKS.map((m,i)=>`
+    <tr><td>${m.task}</td>
+    <td><select class="msel" data-i="${i}">${m.opts.map(o=>`<option ${o===m.model?'selected':''}>${o}</option>`).join('')}</select></td>
+    <td class="mono tnum">${m.lat}</td>
+    <td><span class="pill ok" style="padding:2px 8px"><span class="dot"></span>Ready</span></td></tr>`).join('');
+  document.querySelectorAll('.msel').forEach(sel=> sel.addEventListener('change', ()=>{
+    toast(`${MODEL_TASKS[sel.dataset.i].task} → ${sel.value}`, 'success');
+  }));
+}
+renderProviders(); renderModelTable();
+
+/* ================= PERMISSIONS VIEW ================= */
+const MODES = [
+  {id:'suggest', name:'Suggest', d:'Agent reads and proposes patches. No writes or commands happen without your explicit apply.'},
+  {id:'approve', name:'Approve actions', d:'Agent proposes edits and commands; each write or command group needs your approval before it runs.'},
+  {id:'auto', name:'Controlled auto-run', d:'Agent edits within the workspace and runs low-risk approved commands on its own. Destructive, privileged or out-of-scope actions still ask.'},
+];
+function modeLabel(id){ return MODES.find(m=>m.id===id)?.name || id; }
+function renderModes(){
+  document.getElementById('modeGrid').innerHTML = MODES.map(m=>`
+    <div class="card mode-card ${m.id===autonomyMode?'sel':''}" data-id="${m.id}">
+      <div class="t"><span class="radio"></span>${m.name}</div>
+      <div class="d">${m.d}</div>
+    </div>`).join('');
+  document.getElementById('modePill').textContent = modeLabel(autonomyMode);
+  document.querySelectorAll('.mode-card').forEach(c=> c.addEventListener('click', ()=>{
+    autonomyMode=c.dataset.id; lsSet('ledger_mode',autonomyMode); renderModes();
+    toast(`Autonomy mode: ${modeLabel(autonomyMode)}`,'info');
+  }));
+}
+const PERMS = [
+  {t:'npm / package scripts', s:'Workspace-scoped · no global installs'},
+  {t:'Test runners (vitest, jest)', s:'Read + execute'},
+  {t:'git status / diff / commit', s:'No push, no force operations'},
+  {t:'Network access', s:'Model gateway only — no arbitrary egress'},
+  {t:'File system', s:'payments-service/ only — no path traversal'},
+];
+document.getElementById('permList').innerHTML = PERMS.map((p,i)=>`
+  <div class="permrow"><div class="t">${p.t}<div class="s">${p.s}</div></div><button class="toggle on" data-i="${i}"><span class="knob"></span></button></div>`).join('');
+document.querySelectorAll('#permList .toggle').forEach(t=> t.addEventListener('click', ()=>{
+  t.classList.toggle('on'); toast(t.classList.contains('on')? 'Permission enabled':'Permission disabled','info');
+}));
+renderModes();
+document.getElementById('modePill').addEventListener('click', ()=> showView('permissions'));
+
+/* ================= SETTINGS VIEW ================= */
+const SETTINGS_SECTIONS = ['General','Appearance','AI & Agent','Context & Indexing','Privacy & Security','Usage & Account'];
+let settingsActive='Appearance';
+function renderSettingsNav(){
+  document.getElementById('settingsNav').innerHTML = SETTINGS_SECTIONS.map(s=>`<div class="snav-item ${s===settingsActive?'active':''}" data-s="${s}">${s}</div>`).join('');
+  document.querySelectorAll('.snav-item').forEach(n=> n.addEventListener('click', ()=>{ settingsActive=n.dataset.s; renderSettings(); }));
+}
+function srow(label,sub,control){
+  return `<div class="srow"><div><div class="label">${label}</div>${sub?`<div class="sub">${sub}</div>`:''}</div><div>${control}</div></div>`;
+}
+function renderSettings(){
+  renderSettingsNav();
+  const body=document.getElementById('settingsBody');
+  if(settingsActive==='General'){
+    body.innerHTML = `<h1 class="h1">General</h1><div class="sub">Core editor behavior.</div><div style="margin-top:16px">
+      ${srow('Auto-save','Save files 400ms after you stop typing','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Format on save','Run the configured formatter before saving','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Restore last session','Reopen tabs and panel layout on launch','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Confirm before closing unsaved files','','<div class="toggle on"><span class="knob"></span></div>')}
+    </div>`;
+  } else if(settingsActive==='Appearance'){
+    body.innerHTML = `<h1 class="h1">Appearance</h1><div class="sub">Ledger renders in your system theme by default.</div><div style="margin-top:16px">
+      ${srow('Theme','System follows your OS setting', `<div class="seg3" id="themeSeg">
+        <button data-m="system" class="${themeMode==='system'?'active':''}">System</button>
+        <button data-m="light" class="${themeMode==='light'?'active':''}">Light</button>
+        <button data-m="dark" class="${themeMode==='dark'?'active':''}">Dark</button></div>`)}
+      ${srow('Editor font size','13px monospace','<span class="mono">13px</span>')}
+      ${srow('Minimap','Show a condensed map of the file','<div class="toggle"><span class="knob"></span></div>')}
+      ${srow('Replay onboarding','See the first-launch walkthrough again','<button class="btn sm" id="btnReplayOnb">Replay</button>')}
+    </div>`;
+    document.querySelectorAll('#themeSeg button').forEach(b=> b.addEventListener('click', ()=>{
+      themeMode=b.dataset.m; lsSet('ledger_theme',themeMode); applyTheme(themeMode); renderSettings();
+    }));
+    document.getElementById('btnReplayOnb').addEventListener('click', ()=>{ lsSet('ledger_onboarded', false); startOnboarding(); });
+  } else if(settingsActive==='AI & Agent'){
+    body.innerHTML = `<h1 class="h1">AI & agent behavior</h1><div class="sub">Defaults the agent uses unless a task overrides them.</div><div style="margin-top:16px">
+      ${srow('Default autonomy mode', modeLabel(autonomyMode), `<button class="btn sm" id="btnGoPerm">Open Permissions</button>`)}
+      ${srow('Max steps per task','Hard stop regardless of mode','<span class="mono tnum">20</span>')}
+      ${srow('Time budget per task','','<span class="mono tnum">10 min</span>')}
+      ${srow('Explain tool calls inline','Show the reasoning behind each action','<div class="toggle on"><span class="knob"></span></div>')}
+    </div>`;
+    document.getElementById('btnGoPerm').addEventListener('click', ()=> showView('permissions'));
+  } else if(settingsActive==='Context & Indexing'){
+    body.innerHTML = `<h1 class="h1">Context & indexing</h1><div class="sub">How the repository is read for retrieval.</div><div style="margin-top:16px">
+      ${srow('Index on file save','Keep the local index current incrementally','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Hybrid retrieval','Combine lexical, semantic and symbol search','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Admin console sync','Sync telemetry with Next.js admin console','<div class="toggle"><span class="knob"></span></div>')}
+      ${srow('Manage exclusions','Files and folders never sent to a model','<button class="btn sm" id="btnGoCtx">Open Context Engine</button>')}
+    </div>`;
+    document.getElementById('btnGoCtx').addEventListener('click', ()=> showView('context'));
+  } else if(settingsActive==='Privacy & Security'){
+    body.innerHTML = `<h1 class="h1">Privacy & security</h1><div class="sub">What leaves this machine, and what Ledger remembers.</div><div style="margin-top:16px">
+      ${srow('Send anonymized usage telemetry','Helps improve retrieval quality — no code content included','<div class="toggle"><span class="knob"></span></div>')}
+      ${srow('Allow training on my code','Off by default. Opt in per workspace.','<div class="toggle"><span class="knob"></span></div>')}
+      ${srow('Redact likely secrets before sending context','API keys, tokens, private keys','<div class="toggle on"><span class="knob"></span></div>')}
+      ${srow('Local-only mode','Disable cloud model calls entirely for this workspace','<div class="toggle"><span class="knob"></span></div>')}
+    </div>`;
+  } else if(settingsActive==='Usage & Account'){
+    body.innerHTML = `<h1 class="h1">Usage & account</h1><div class="sub">sumit · payments-service workspace</div>
+      <div class="flexrow gap16" style="margin-top:16px;flex-wrap:wrap">
+        <div class="card" style="padding:14px;flex:1;min-width:140px"><div class="lbl">Plan</div><div style="font-size:15px;font-weight:600;margin-top:6px">Pro — Developer Preview</div></div>
+        <div class="card" style="padding:14px;flex:1;min-width:140px"><div class="lbl">This period</div><div style="font-size:15px;font-weight:600;margin-top:6px" class="tnum">$18.40 of $30 included</div></div>
+        <div class="card" style="padding:14px;flex:1;min-width:140px"><div class="lbl">Renews</div><div style="font-size:15px;font-weight:600;margin-top:6px">Dec 1, 2026</div></div>
+      </div>
+      <div style="margin-top:18px">
+        ${srow('Usage-based overage','Metered beyond the included quota','<div class="toggle on"><span class="knob"></span></div>')}
+        ${srow('Email receipts','','<div class="toggle on"><span class="knob"></span></div>')}
+        ${srow('Manage billing','','<button class="btn sm">Open billing portal</button>')}
+        ${srow('Sign out','','<button class="btn sm danger">Sign out</button>')}
+      </div>`;
+  }
+}
+renderSettings();
+
+/* ================= COMMAND PALETTE ================= */
+const COMMANDS = [
+  {label:'Go to Workspace', kbd:'G W', action:()=>showView('workspace')},
+  {label:'Go to Agent Command Center', kbd:'G A', action:()=>showView('agent')},
+  {label:'Go to Diff Review', kbd:'G D', action:()=>showView('diff')},
+  {label:'Go to Context Engine', kbd:'G C', action:()=>showView('context')},
+  {label:'Go to Models & Providers', kbd:'G M', action:()=>showView('models')},
+  {label:'Go to Permissions', kbd:'G P', action:()=>showView('permissions')},
+  {label:'Go to Settings', kbd:'G S', action:()=>showView('settings')},
+  {label:'Run agent task', kbd:'', action:()=>{ showView('agent'); setTimeout(()=>document.getElementById('btnRun').click(),250); }},
+  {label:'Toggle theme', kbd:'', action:()=>document.getElementById('themeBtn').click()},
+  {label:'Open file: password-reset.ts', kbd:'', action:()=>{ activeTab='src/routes/password-reset.ts'; if(!openTabs.includes(activeTab))openTabs.push(activeTab); showView('workspace'); renderWorkspace(); }},
+  {label:'Open file: auth.service.ts (via mailer.ts context)', kbd:'', action:()=>{ showView('workspace'); }},
+  {label:'Reindex repository', kbd:'', action:()=>{ showView('context'); setTimeout(()=>document.getElementById('btnReindex').click(),250); }},
+];
+let paletteFiltered=COMMANDS, paletteSel=0;
+function openPalette(){
+  document.getElementById('paletteOverlay').hidden=false;
+  const input=document.getElementById('paletteInput');
+  input.value=''; paletteFiltered=COMMANDS; paletteSel=0;
+  renderPalette(); input.focus();
+}
+function closePalette(){ document.getElementById('paletteOverlay').hidden=true; }
+function renderPalette(){
+  document.getElementById('paletteList').innerHTML = paletteFiltered.map((c,i)=>`
+    <div class="pitem ${i===paletteSel?'sel':''}" data-i="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg><span>${c.label}</span>${c.kbd?`<span class="k">${c.kbd}</span>`:''}</div>
+  `).join('') || '<div class="pitem" style="color:var(--text-3)">No matching commands</div>';
+  document.querySelectorAll('.pitem[data-i]').forEach(el=> el.addEventListener('click', ()=>{
+    paletteFiltered[el.dataset.i].action(); closePalette();
+  }));
+}
+document.getElementById('paletteInput').addEventListener('input', e=>{
+  const q=e.target.value.toLowerCase();
+  paletteFiltered = COMMANDS.filter(c=>c.label.toLowerCase().includes(q));
+  paletteSel=0; renderPalette();
+});
+document.getElementById('paletteInput').addEventListener('keydown', e=>{
+  if(e.key==='ArrowDown'){ e.preventDefault(); paletteSel=Math.min(paletteSel+1, paletteFiltered.length-1); renderPalette(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); paletteSel=Math.max(paletteSel-1,0); renderPalette(); }
+  else if(e.key==='Enter'){ if(paletteFiltered[paletteSel]){ paletteFiltered[paletteSel].action(); closePalette(); } }
+  else if(e.key==='Escape'){ closePalette(); }
+});
+document.getElementById('paletteBtn').addEventListener('click', openPalette);
+document.getElementById('paletteOverlay').addEventListener('click', e=>{ if(e.target.id==='paletteOverlay') closePalette(); });
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); }
+});
+
+/* ================= ONBOARDING ================= */
+const ONB_STEPS = ['welcome','theme','workspace','index'];
+let onbStep=0, onbTheme='system';
+function startOnboarding(){
+  onbStep=0; onbTheme=themeMode;
+  document.getElementById('onbOverlay').hidden=false;
+  renderOnboarding();
+}
+function finishOnboarding(){
+  lsSet('ledger_onboarded', true);
+  document.getElementById('onbOverlay').hidden=true;
+}
+function renderOnboarding(){
+  const el=document.getElementById('onbOverlay');
+  const stepsHtml = `<div class="onb-steps">${ONB_STEPS.map((s,i)=>`<div class="s ${i<onbStep?'done':i===onbStep?'cur':''}"></div>`).join('')}</div>`;
+  let body='';
+  if(onbStep===0){
+    body = `<div class="flexcol gap16">
+      <div><h1 class="h1" style="font-size:20px">Welcome to Ledger</h1><div class="sub" style="margin-top:6px">An agentic coding IDE built around one idea: you should always be able to see exactly what the agent is doing, and undo it if you need to.</div></div>
+      <button class="btn primary" id="onbNext" style="justify-content:center;padding:10px">Continue</button>
+    </div>`;
+  } else if(onbStep===1){
+    body = `<div class="flexcol gap16">
+      <div><h1 class="h1" style="font-size:17px">Choose a theme</h1><div class="sub" style="margin-top:6px">You can change this later in Settings.</div></div>
+      <div class="flexcol gap10">
+        ${['system','dark','light'].map(t=>`<div class="onb-opt ${onbTheme===t?'sel':''}" data-t="${t}"><span class="n">${t[0].toUpperCase()+t.slice(1)}</span><span class="d">${t==='system'?'Match your OS':t==='dark'?'Structural Mono, dark':'Structural Mono, light'}</span></div>`).join('')}
+      </div>
+      <button class="btn primary" id="onbNext" style="justify-content:center;padding:10px">Continue</button>
+    </div>`;
+  } else if(onbStep===2){
+    body = `<div class="flexcol gap16">
+      <div><h1 class="h1" style="font-size:17px">Connect a workspace</h1><div class="sub" style="margin-top:6px">Ledger reads your repository locally. Nothing is uploaded until a task needs it.</div></div>
+      <div class="card" style="padding:14px"><div style="font-size:12.5px;color:var(--text)">~/dev/payments-service</div><div class="sub" style="margin-top:3px">412 files · git · main branch</div></div>
+      <button class="btn primary" id="onbNext" style="justify-content:center;padding:10px">Open this workspace</button>
+    </div>`;
+  } else if(onbStep===3){
+    body = `<div class="flexcol gap16">
+      <div><h1 class="h1" style="font-size:17px">Indexing payments-service…</h1><div class="sub" style="margin-top:6px">Building the local context index. This only happens once.</div></div>
+      <div class="barwrap" style="height:6px"><div id="onbBar" style="width:0%"></div></div>
+      <button class="btn primary" id="onbNext" style="justify-content:center;padding:10px" disabled>Enter Ledger</button>
+    </div>`;
+  }
+  el.innerHTML = `<div class="onb-card">${stepsHtml}${body}</div>`;
+  if(onbStep===1){
+    el.querySelectorAll('.onb-opt').forEach(o=> o.addEventListener('click', ()=>{ onbTheme=o.dataset.t; applyTheme(onbTheme); renderOnboarding(); }));
+  }
+  if(onbStep===3){
+    let p=0; const bar=document.getElementById('onbBar'); const btn=document.getElementById('onbNext');
+    const iv=setInterval(()=>{ p+=Math.random()*20+10; if(p>=100){p=100; clearInterval(iv); btn.disabled=false;} bar.style.width=p+'%'; }, 220);
+  }
+  document.getElementById('onbNext').addEventListener('click', ()=>{
+    if(onbStep===1){ themeMode=onbTheme; lsSet('ledger_theme', themeMode); }
+    if(onbStep < ONB_STEPS.length-1){ onbStep++; renderOnboarding(); }
+    else { finishOnboarding(); toast('Workspace indexed — welcome in','success'); renderSettings(); }
+  });
+}
+if(!lsGet('ledger_onboarded', false)){
+  setTimeout(startOnboarding, 150);
+}
+
+/* ---------------- initial route ---------------- */
+showView(location.hash.slice(1) || 'workspace');
+
+/* ---------------- hot reload hook ---------------- */
+function snapshotState(){ return { view: location.hash.slice(1)||'workspace' }; }
+function bootFrom(data){ if(data && data.view) showView(data.view); }
+if(window.claude && window.claude.hot){
+  try{ window.claude.hot.snapshot(snapshotState); }catch(e){}
+  if(window.claude.hot.ready) window.claude.hot.ready(bootFrom); else bootFrom(window.claude.hot.data||{});
+}
+
+})();
+</script>
+
+</body></html>
